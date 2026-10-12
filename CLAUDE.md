@@ -39,7 +39,11 @@ Consistent JSON shape: `{ "error": { "code": "STRING_CODE", "message": "human te
 ## Database
 - Prisma migrations only; never edit an applied migration — add a new one. Review generated SQL. Use transactions for multi-step integrity. Dates for entries are `DATE` (no time zone); timezone policy is decided in Phase 6.
 
+## Frontend rules
+- All API access goes through `frontend/src/api/client.ts` (never call `fetch` elsewhere). Data-backed views use `useAsync` + `AsyncView` (loading, error with retry, empty, success). Show users `ApiError.message` or generic text only. The UI is never a security boundary. Dev: open `http://localhost:5173`, not `127.0.0.1`.
+
 ## Testing and quality gates
+End-to-end browser tests: `cd frontend && npm run e2e` (disposable `*_test` database only; see `frontend/README.md`).
 Before a task is Done: type-check, lint, and relevant tests pass; add positive and negative tests for business rules (auth, ownership, lock). See `testing-and-quality` skill and `docs/testing-strategy.md`.
 
 ## Documentation
