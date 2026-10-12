@@ -1,0 +1,207 @@
+// Timesheets and Project Billing - initial schema (Phase 2).
+// Design notes live in docs/database-design.md. CHECK constraints and (later) triggers
+// that Prisma cannot express are added by hand to the migration SQL.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  CONTRIBUTOR
+  MANAGER
+  ADMIN // Admin/Finance: may lock billing periods
+
+  @@map("role")
+}
+
+enum SubmissionStatus {
+  SUBMITTED
+  APPROVED
+  REJECTED
+
+  @@map("submission_status")
+}
+
+enum ApprovalDecision {
+  APPROVED
+  REJECTED
+
+  @@map("approval_decision")
+}
+
+enum AuditAction {
+  SUBMISSION_SUBMITTED
+  SUBMISSION_APPROVED
+  SUBMISSION_REJECTED
+  PERIOD_LOCKED
+  PERIOD_UNLOCKED
+
+  @@map("audit_action")
+}
+
+model User {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email        String   @unique // stored lower-cased by the application
+  name         String
+  passwordHash String   @map("password_hash")
+  role         Role     @default(CONTRIBUTOR)
+  managerId    String?  @map("manager_id") @db.Uuid
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  manager       User?              @relation("ManagerReports", fields: [managerId], references: [id], onDelete: Restrict)
+  directReports User[]             @relation("ManagerReports")
+  timeEntries   TimeEntry[]
+  submissions   WeeklySubmission[]
+  approvals     Approval[]
+  lockedPeriods LockedPeriod[]
+  auditLogs     AuditLog[]
+  sessions      Session[]
+
+  @@index([managerId])
+  @@map("users")
+}
+
+model Project {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code        String    @unique
+  name        String
+  clientName  String?   @map("client_name")
+  budgetHours Decimal   @map("budget_hours") @db.Decimal(10, 2)
+  startDate   DateTime? @map("start_date") @db.Date
+  endDate     DateTime? @map("end_date") @db.Date
+  isActive    Boolean   @default(true) @map("is_active")
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tasks       Task[]
+  timeEntries TimeEntry[]
+
+  @@map("projects")
+}
+
+model Task {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  projectId String   @map("project_id") @db.Uuid
+  name      String
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  project     Project     @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  timeEntries TimeEntry[]
+
+  @@unique([projectId, name])
+  // Target of the composite FK from time_entries: guarantees an entry's task belongs to its project.
+  @@unique([id, projectId])
+  @@map("tasks")
+}
+
+model TimeEntry {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId     String   @map("user_id") @db.Uuid
+  projectId  String   @map("project_id") @db.Uuid
+  taskId     String   @map("task_id") @db.Uuid
+  workDate   DateTime @map("work_date") @db.Date
+  hours      Decimal  @db.Decimal(4, 2)
+  isBillable Boolean  @map("is_billable")
+  notes      String?
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Restrict)
+  project Project @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  task    Task    @relation(fields: [taskId, projectId], references: [id, projectId], onDelete: Restrict)
+
+  @@index([userId, workDate])
+  @@index([projectId, workDate])
+  @@index([workDate])
+  @@map("time_entries")
+}
+
+model WeeklySubmission {
+  id          String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId      String           @map("user_id") @db.Uuid
+  weekStart   DateTime         @map("week_start") @db.Date // Monday of the ISO week
+  status      SubmissionStatus @default(SUBMITTED)
+  submittedAt DateTime         @default(now()) @map("submitted_at") @db.Timestamptz(3)
+  createdAt   DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  user      User       @relation(fields: [userId], references: [id], onDelete: Restrict)
+  approvals Approval[]
+
+  @@unique([userId, weekStart])
+  @@index([status])
+  @@map("weekly_submissions")
+}
+
+// Append-only history of manager decisions (a rejected week can be resubmitted and decided again).
+model Approval {
+  id           String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  submissionId String           @map("submission_id") @db.Uuid
+  managerId    String           @map("manager_id") @db.Uuid
+  decision     ApprovalDecision
+  comment      String?
+  decidedAt    DateTime         @default(now()) @map("decided_at") @db.Timestamptz(3)
+
+  submission WeeklySubmission @relation(fields: [submissionId], references: [id], onDelete: Restrict)
+  manager    User             @relation(fields: [managerId], references: [id], onDelete: Restrict)
+
+  @@index([submissionId])
+  @@index([managerId])
+  @@map("approvals")
+}
+
+// One row per locked calendar month (global). periodStart is always the first day of the month.
+model LockedPeriod {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  periodStart DateTime @unique @map("period_start") @db.Date
+  lockedById  String   @map("locked_by_id") @db.Uuid
+  lockedAt    DateTime @default(now()) @map("locked_at") @db.Timestamptz(3)
+  note        String?
+
+  lockedBy User @relation(fields: [lockedById], references: [id], onDelete: Restrict)
+
+  @@map("locked_periods")
+}
+
+model AuditLog {
+  id         String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  actorId    String      @map("actor_id") @db.Uuid
+  action     AuditAction
+  entityType String      @map("entity_type")
+  entityId   String      @map("entity_id") @db.Uuid
+  metadata   Json?
+  createdAt  DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  actor User @relation(fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@index([entityType, entityId])
+  @@index([actorId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+// Server-side login sessions. Only the SHA-256 hash of the cookie token is stored, so a database
+// leak does not expose usable session tokens. Sessions are ephemeral, so (unlike business data)
+// they are deleted together with their user.
+model Session {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tokenHash String   @unique @map("token_hash")
+  userId    String   @map("user_id") @db.Uuid
+  expiresAt DateTime @map("expires_at") @db.Timestamptz(3)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("sessions")
+}
