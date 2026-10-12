@@ -1,0 +1,82 @@
+# Timesheets & Project Billing - run everything with:   docker compose up --build
+# Configuration comes from a git-ignored `.env` next to this file (copy `.env.example`).
+# Open http://localhost:8080 (the default WEB_PORT). Details: docs/deployment.md.
+name: timesheets
+
+services:
+  db:
+    image: postgres:14-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_SUPERUSER_PASSWORD:?set POSTGRES_SUPERUSER_PASSWORD in .env}
+      DB_NAME: ${DB_NAME:-timesheets}
+      DB_OWNER_PASSWORD: ${DB_OWNER_PASSWORD:?set DB_OWNER_PASSWORD in .env}
+      DB_APP_PASSWORD: ${DB_APP_PASSWORD:?set DB_APP_PASSWORD in .env}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks: [internal]
+    # No published port: only the backend containers can reach the database.
+
+  # One-shot: applies the committed Prisma migrations as the OWNER role, then exits.
+  migrate:
+    build: { context: ./backend, target: build }
+    command: ["npx", "prisma", "migrate", "deploy"]
+    environment:
+      DATABASE_URL: postgresql://timesheets_owner:${DB_OWNER_PASSWORD}@db:5432/${DB_NAME:-timesheets}?schema=public
+    depends_on:
+      db: { condition: service_healthy }
+    restart: "no"
+    networks: [internal]
+
+  backend:
+    build: { context: ./backend, target: runtime }
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      DATABASE_URL: postgresql://timesheets_app:${DB_APP_PASSWORD}@db:5432/${DB_NAME:-timesheets}?schema=public
+      CORS_ORIGIN: ${PUBLIC_ORIGIN:-http://localhost:8080}
+      TRUST_PROXY: "1" # exactly one proxy hop: the nginx in the `web` service
+      SESSION_TTL_HOURS: ${SESSION_TTL_HOURS:-8}
+    depends_on:
+      db: { condition: service_healthy }
+      migrate: { condition: service_completed_successfully }
+    networks: [internal]
+    # No published port: reachable only through the `web` reverse proxy.
+
+  web:
+    build: { context: ./frontend, target: runtime }
+    restart: unless-stopped
+    ports:
+      - "${WEB_PORT:-8080}:8080"
+    depends_on:
+      backend: { condition: service_healthy }
+    networks: [internal]
+
+  # Optional demo data (5 users, one per role pair) - NEVER for a real deployment:
+  #   SEED_PASSWORD='<12+ chars>' docker compose --profile demo run --rm seed
+  seed:
+    profiles: ["demo"]
+    build: { context: ./backend, target: build }
+    command: ["npx", "tsx", "scripts/seed.ts"]
+    environment:
+      NODE_ENV: development # the seed script refuses to run as production; this is the one-shot CLI only
+      DATABASE_URL: postgresql://timesheets_app:${DB_APP_PASSWORD}@db:5432/${DB_NAME:-timesheets}?schema=public
+      SEED_PASSWORD: ${SEED_PASSWORD:?set SEED_PASSWORD (12+ characters) to seed demo users}
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+    restart: "no"
+    networks: [internal]
+
+networks:
+  internal: {}
+
+volumes:
+  pgdata: {}
