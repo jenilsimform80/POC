@@ -1,0 +1,14 @@
+.name {
+  font-weight: 600;
+  color: var(--color-text);
+  font-size: 1rem;
+}
+.usage {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-variant-numeric: tabular-nums;
+}
+.usage progress {
+  width: 6rem;
+}

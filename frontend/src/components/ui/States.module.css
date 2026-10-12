@@ -1,0 +1,47 @@
+.state {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+}
+.state p {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+.error {
+  border-color: var(--color-danger);
+}
+.error strong {
+  color: var(--color-danger);
+}
+.empty {
+  align-items: center;
+  text-align: center;
+  padding: 2rem 1rem;
+}
+.spinner {
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid var(--color-border);
+  border-top-color: var(--color-accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation-duration: 3s;
+  }
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.state:has(.spinner) {
+  flex-direction: row;
+  align-items: center;
+}

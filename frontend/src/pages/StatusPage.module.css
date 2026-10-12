@@ -1,0 +1,24 @@
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+.card {
+  padding: 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+}
+.card h2 {
+  margin-top: 0;
+  font-size: 1.1rem;
+}
+.ok {
+  color: var(--color-success);
+  font-weight: 600;
+}
+.bad {
+  color: var(--color-danger);
+  font-weight: 600;
+}

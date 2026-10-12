@@ -1,0 +1,26 @@
+.button {
+  font: inherit;
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius);
+  border: 1px solid transparent;
+  cursor: pointer;
+}
+.button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.primary {
+  background: var(--color-accent);
+  color: var(--color-accent-text);
+}
+.primary:hover:not(:disabled) {
+  background: var(--color-accent-hover);
+}
+.secondary {
+  background: transparent;
+  color: var(--color-text);
+  border-color: var(--color-border);
+}
+.secondary:hover:not(:disabled) {
+  background: var(--color-surface-alt);
+}

@@ -1,0 +1,25 @@
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+.field label {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+.hint {
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+  max-width: 24rem; /* long hints wrap instead of stretching the whole field */
+}
+.error {
+  color: var(--color-danger);
+  font-size: 0.85rem;
+}
+.checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
