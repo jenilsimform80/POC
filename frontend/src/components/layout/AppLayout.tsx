@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { NavLink, Outlet } from 'react-router';
 import { canAccess, type Area } from '../../auth/access';
 import { useAuth } from '../../auth/useAuth';
@@ -6,22 +7,33 @@ import { Alert } from '../ui/Alert';
 import { describeError } from '../ui/describeError';
 import { Button } from '../ui/Button';
 import styles from './AppLayout.module.css';
+import {
+  ChartIcon,
+  CheckIcon,
+  ClockIcon,
+  FolderIcon,
+  HomeIcon,
+  LockIcon,
+  PulseIcon,
+  WalletIcon,
+} from './icons';
 
 interface NavItem {
   to: string;
   label: string;
+  icon: ReactNode;
   end?: boolean;
   area?: Area;
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { to: '/', label: 'Home', end: true },
-  { to: '/timesheet', label: 'Timesheet', area: 'timesheet' },
-  { to: '/approvals', label: 'Approvals', area: 'approvals' },
-  { to: '/projects', label: 'Projects', area: 'projects' },
-  { to: '/reports', label: 'Reports', area: 'reports', end: true },
-  { to: '/reports/budgets', label: 'Budgets', area: 'budgets' },
-  { to: '/periods', label: 'Locked periods', area: 'periods' },
+  { to: '/', label: 'Home', icon: <HomeIcon />, end: true },
+  { to: '/timesheet', label: 'Timesheet', icon: <ClockIcon />, area: 'timesheet' },
+  { to: '/approvals', label: 'Approvals', icon: <CheckIcon />, area: 'approvals' },
+  { to: '/projects', label: 'Projects', icon: <FolderIcon />, area: 'projects' },
+  { to: '/reports', label: 'Reports', icon: <ChartIcon />, area: 'reports', end: true },
+  { to: '/reports/budgets', label: 'Budgets', icon: <WalletIcon />, area: 'budgets' },
+  { to: '/periods', label: 'Locked periods', icon: <LockIcon />, area: 'periods' },
 ];
 
 const ROLE_LABEL = {
@@ -30,6 +42,15 @@ const ROLE_LABEL = {
   ADMIN: 'Admin / Finance',
 } as const;
 
+function initials(name: string): string {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]!.toUpperCase())
+    .join('');
+}
+
 export function AppLayout() {
   const { state, logout } = useAuth();
   const signOut = useMutation(logout);
@@ -37,68 +58,99 @@ export function AppLayout() {
   const items = user
     ? NAV_ITEMS.filter((item) => !item.area || canAccess(user.role, item.area))
     : [];
+  const linkClass = ({ isActive }: { isActive: boolean }) =>
+    isActive ? styles.active : styles.link;
+
+  const signOutBanner = signOut.error && (
+    <div className={styles.banner}>
+      <Alert variant="error" title="Could not sign out">
+        {describeError(signOut.error)} You are still signed in.
+      </Alert>
+    </div>
+  );
+
+  if (!user) {
+    return (
+      <div className={`${styles.shell} ${styles.bare}`}>
+        <a href="#main" className={styles.skipLink}>
+          Skip to content
+        </a>
+        <header className={styles.bareHeader}>
+          <span className={styles.bareBrand}>
+            <span className={styles.logo} aria-hidden="true">
+              ⏱
+            </span>
+            Timesheets &amp; Billing
+          </span>
+          <nav aria-label="Main">
+            <div className={styles.bareNav}>
+              <NavLink to="/status">System status</NavLink>
+              {state.status === 'anonymous' && <NavLink to="/login">Sign in</NavLink>}
+            </div>
+          </nav>
+        </header>
+        <main id="main" className={styles.content}>
+          <Outlet />
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className={styles.shell}>
       <a href="#main" className={styles.skipLink}>
         Skip to content
       </a>
-      <header className={styles.header}>
-        <span className={styles.brand}>Timesheets &amp; Billing</span>
+      <aside className={styles.sidebar}>
+        <span className={styles.brand}>
+          <span className={styles.logo} aria-hidden="true">
+            ⏱
+          </span>
+          Timesheets &amp; Billing
+        </span>
         <nav aria-label="Main">
           <ul className={styles.nav}>
             {items.map((item) => (
               <li key={item.to}>
-                <NavLink
-                  to={item.to}
-                  end={item.end ?? false}
-                  className={({ isActive }) => (isActive ? styles.active : styles.link)}
-                >
+                <NavLink to={item.to} end={item.end ?? false} className={linkClass}>
+                  {item.icon}
                   {item.label}
                 </NavLink>
               </li>
             ))}
-            <li>
-              <NavLink
-                to="/status"
-                className={({ isActive }) => (isActive ? styles.active : styles.link)}
-              >
+            <li className={styles.statusItem}>
+              <NavLink to="/status" className={linkClass}>
+                <PulseIcon />
                 System status
               </NavLink>
             </li>
           </ul>
         </nav>
-        <div className={styles.account}>
-          {user ? (
-            <>
-              <span>
-                {user.name} <small className={styles.role}>({ROLE_LABEL[user.role]})</small>
-              </span>
-              <Button
-                variant="secondary"
-                disabled={signOut.running}
-                onClick={() => void signOut.run()}
-              >
-                Sign out
-              </Button>
-            </>
-          ) : state.status === 'anonymous' ? (
-            <NavLink to="/login" className={styles.link}>
-              Sign in
-            </NavLink>
-          ) : null}
-        </div>
-      </header>
-      {signOut.error && (
-        <div className={styles.banner}>
-          <Alert variant="error" title="Could not sign out">
-            {describeError(signOut.error)} You are still signed in.
-          </Alert>
-        </div>
-      )}
-      <main id="main" className={styles.main}>
-        <Outlet />
-      </main>
+      </aside>
+      <div className={styles.content}>
+        <header className={styles.topbar}>
+          <div className={styles.account}>
+            <span className={styles.avatar} aria-hidden="true">
+              {initials(user.name)}
+            </span>
+            <span className={styles.who}>
+              <span className={styles.name}>{user.name}</span>
+              <small className={styles.role}>{ROLE_LABEL[user.role]}</small>
+            </span>
+            <Button
+              variant="secondary"
+              disabled={signOut.running}
+              onClick={() => void signOut.run()}
+            >
+              Sign out
+            </Button>
+          </div>
+        </header>
+        {signOutBanner}
+        <main id="main" className={styles.main}>
+          <Outlet />
+        </main>
+      </div>
     </div>
   );
 }

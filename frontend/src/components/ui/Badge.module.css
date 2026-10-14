@@ -1,24 +1,37 @@
 .badge {
-  display: inline-block;
-  padding: 0.1rem 0.55rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.15rem 0.6rem;
   border-radius: 999px;
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   font-weight: 600;
-  border: 1px solid currentColor;
   white-space: nowrap;
+  background: var(--color-surface-alt);
+}
+.badge::before {
+  content: '';
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 50%;
+  background: currentColor;
 }
 .neutral {
   color: var(--color-text-muted);
 }
 .info {
   color: var(--color-accent);
+  background: var(--color-accent-soft);
 }
 .success {
   color: var(--color-success);
+  background: var(--color-success-soft);
 }
 .warning {
   color: var(--color-warning);
+  background: var(--color-warning-soft);
 }
 .danger {
   color: var(--color-danger);
+  background: var(--color-danger-soft);
 }

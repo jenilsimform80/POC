@@ -6,7 +6,7 @@ import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { describeError } from '../../components/ui/describeError';
 import { useMutation } from '../../hooks/useMutation';
-import { formatDay } from '../../lib/dates';
+import { formatDay, todayIso } from '../../lib/dates';
 import { EntryForm } from './EntryForm';
 import type { ProjectLookup } from './projectLookup';
 import styles from './Timesheet.module.css';
@@ -51,9 +51,14 @@ export function DaySection({
   const editable = Boolean(projects && weekStart && weekEnd && onCreate && onUpdate && onDelete);
   const canEdit = editable && !lockedReason;
   const headingId = `day-${date}`;
+  const isToday = date === todayIso();
+  const isWeekend = [0, 6].includes(new Date(`${date}T00:00:00Z`).getUTCDay());
+  const sectionClass = [styles.day, isToday && styles.today, isWeekend && styles.weekend]
+    .filter(Boolean)
+    .join(' ');
 
   return (
-    <section aria-labelledby={headingId} className={styles.day}>
+    <section aria-labelledby={headingId} className={sectionClass}>
       <header className={styles.dayHeader}>
         <h3 id={headingId}>{formatDay(date)}</h3>
         <span className={styles.dayTotal}>{total > 0 ? `${total} h` : '—'}</span>

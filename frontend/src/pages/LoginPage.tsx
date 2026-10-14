@@ -32,37 +32,57 @@ export function LoginPage() {
   };
 
   return (
-    <section className={styles.wrapper} aria-labelledby="login-heading">
-      <h1 id="login-heading">Sign in</h1>
-      <form onSubmit={(e) => void onSubmit(e)} noValidate className={styles.form}>
-        {signIn.error && Object.keys(serverFields).length === 0 && (
-          <Alert variant="error">{describeError(signIn.error)}</Alert>
-        )}
-        <TextField
-          label="Email"
-          type="email"
-          autoComplete="username"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          error={
-            (touched && missing.email ? 'Enter your email' : undefined) ?? serverFields['email']
-          }
-        />
-        <TextField
-          label="Password"
-          type="password"
-          autoComplete="current-password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          error={
-            (touched && missing.password ? 'Enter your password' : undefined) ??
-            serverFields['password']
-          }
-        />
-        <Button type="submit" disabled={signIn.running}>
-          {signIn.running ? 'Signing in…' : 'Sign in'}
-        </Button>
-      </form>
-    </section>
+    <div className={styles.page}>
+      <div className={styles.hero} aria-hidden="true">
+        <h2>Track time. Approve fast. Bill with confidence.</h2>
+        <p>Log hours against projects, submit weekly timesheets and keep billing periods locked.</p>
+        <ul className={styles.points}>
+          <li>
+            <span className={styles.tick}>✓</span>Weekly timesheets with manager approval
+          </li>
+          <li>
+            <span className={styles.tick}>✓</span>Locked billing periods you can trust
+          </li>
+          <li>
+            <span className={styles.tick}>✓</span>Hours and budget reports per project
+          </li>
+        </ul>
+      </div>
+      <div className={styles.panel}>
+        <section className={styles.wrapper} aria-labelledby="login-heading">
+          <h1 id="login-heading">Sign in</h1>
+          <p className={styles.lead}>Welcome back — enter your details to continue.</p>
+          <form onSubmit={(e) => void onSubmit(e)} noValidate className={styles.form}>
+            {signIn.error && Object.keys(serverFields).length === 0 && (
+              <Alert variant="error">{describeError(signIn.error)}</Alert>
+            )}
+            <TextField
+              label="Email"
+              type="email"
+              autoComplete="username"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              error={
+                (touched && missing.email ? 'Enter your email' : undefined) ?? serverFields['email']
+              }
+            />
+            <TextField
+              label="Password"
+              type="password"
+              autoComplete="current-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              error={
+                (touched && missing.password ? 'Enter your password' : undefined) ??
+                serverFields['password']
+              }
+            />
+            <Button type="submit" disabled={signIn.running}>
+              {signIn.running ? 'Signing in…' : 'Sign in'}
+            </Button>
+          </form>
+        </section>
+      </div>
+    </div>
   );
 }

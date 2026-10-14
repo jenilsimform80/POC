@@ -1,25 +1,33 @@
 .button {
   font: inherit;
+  font-weight: 600;
+  font-size: 0.9rem;
   padding: 0.5rem 1rem;
   border-radius: var(--radius);
   border: 1px solid transparent;
   cursor: pointer;
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    box-shadow 0.15s;
 }
 .button:disabled {
-  opacity: 0.6;
+  opacity: 0.55;
   cursor: not-allowed;
 }
 .primary {
   background: var(--color-accent);
   color: var(--color-accent-text);
+  box-shadow: var(--shadow-sm);
 }
 .primary:hover:not(:disabled) {
   background: var(--color-accent-hover);
 }
 .secondary {
-  background: transparent;
+  background: var(--color-surface);
   color: var(--color-text);
-  border-color: var(--color-border);
+  border-color: var(--color-border-strong);
+  box-shadow: var(--shadow-sm);
 }
 .secondary:hover:not(:disabled) {
   background: var(--color-surface-alt);

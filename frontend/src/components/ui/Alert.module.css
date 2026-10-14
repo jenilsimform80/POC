@@ -1,24 +1,33 @@
 .alert {
-  padding: 0.75rem 1rem;
+  padding: 0.8rem 1rem;
   border: 1px solid var(--color-border);
   border-left-width: 4px;
   border-radius: var(--radius);
   background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
   margin: 0.5rem 0;
 }
 .alert strong {
   display: block;
   margin-bottom: 0.15rem;
 }
+.alert ul {
+  margin: 0.25rem 0 0;
+  padding-left: 1.2rem;
+}
 .info {
   border-left-color: var(--color-accent);
+  background: var(--color-info-soft);
 }
 .success {
   border-left-color: var(--color-success);
+  background: var(--color-success-soft);
 }
 .warning {
   border-left-color: var(--color-warning);
+  background: var(--color-warning-soft);
 }
 .error {
   border-left-color: var(--color-danger);
+  background: var(--color-danger-soft);
 }

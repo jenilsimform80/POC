@@ -1,49 +1,143 @@
 .shell {
   min-height: 100vh;
   display: flex;
-  flex-direction: column;
 }
-.header {
+.sidebar {
+  position: sticky;
+  top: 0;
+  align-self: flex-start;
+  height: 100vh;
+  width: 15.5rem;
+  flex-shrink: 0;
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  padding: 0.75rem 1.5rem;
-  background: var(--color-surface);
-  border-bottom: 1px solid var(--color-border);
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 1.25rem 0.9rem;
+  background: var(--color-sidebar);
+  color: var(--color-sidebar-text);
 }
 .brand {
-  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0 0.5rem;
+  color: #fff;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.logo {
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 9px;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: #fff;
+  font-size: 0.95rem;
 }
 .nav {
   display: flex;
-  gap: 0.25rem;
+  flex-direction: column;
+  gap: 0.15rem;
   margin: 0;
   padding: 0;
   list-style: none;
 }
+.sectionLabel {
+  padding: 0.75rem 0.65rem 0.25rem;
+  font-size: 0.7rem;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.6;
+}
 .link,
 .active {
-  display: inline-block;
-  padding: 0.35rem 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.55rem 0.65rem;
   border-radius: var(--radius);
-  color: var(--color-text);
+  color: var(--color-sidebar-text);
   text-decoration: none;
+  font-weight: 550;
+  font-size: 0.92rem;
+  transition:
+    background 0.15s,
+    color 0.15s;
 }
 .link:hover {
-  background: var(--color-surface-alt);
+  background: var(--color-sidebar-active);
+  color: #fff;
 }
 .active {
   background: var(--color-accent);
-  color: var(--color-accent-text);
+  color: #fff;
+  box-shadow: 0 2px 10px rgba(79, 70, 229, 0.35);
+}
+.statusItem {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--color-sidebar-active);
+}
+.content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.7rem 2rem;
+  background: color-mix(in srgb, var(--color-surface) 88%, transparent);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--color-border);
+}
+.topbarTitle {
+  font-weight: 650;
+}
+.account {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-left: auto;
+}
+.avatar {
+  display: grid;
+  place-items: center;
+  width: 2.1rem;
+  height: 2.1rem;
+  border-radius: 50%;
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+.who {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+.name {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+.role {
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
 }
 .main {
   flex: 1;
   width: 100%;
-  max-width: 64rem;
+  max-width: 72rem;
   margin: 0 auto;
-  padding: 1.5rem;
+  padding: 2rem;
 }
 .skipLink {
   position: absolute;
@@ -56,18 +150,73 @@
   background: var(--color-surface);
   z-index: 10;
 }
-.account {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-.role {
-  color: var(--color-text-muted);
-}
-
 .banner {
-  max-width: 64rem;
+  max-width: 72rem;
   width: 100%;
   margin: 0 auto;
-  padding: 0 1.5rem;
+  padding: 0.5rem 2rem 0;
+}
+
+/* Signed-out pages: no sidebar, slim top bar. */
+.bare {
+  flex-direction: column;
+}
+.bareHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.8rem 2rem;
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+}
+.bareBrand {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  font-weight: 700;
+}
+.bareNav {
+  display: flex;
+  gap: 0.25rem;
+}
+.bareNav a {
+  padding: 0.35rem 0.75rem;
+  border-radius: var(--radius);
+  color: var(--color-text);
+  text-decoration: none;
+  font-weight: 550;
+}
+.bareNav a:hover {
+  background: var(--color-surface-alt);
+}
+
+@media (max-width: 52rem) {
+  .shell {
+    flex-direction: column;
+  }
+  .sidebar {
+    position: static;
+    height: auto;
+    width: 100%;
+    gap: 0.75rem;
+    padding: 0.75rem;
+  }
+  .nav {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+  .sectionLabel {
+    display: none;
+  }
+  .statusItem {
+    margin-top: 0;
+    padding-top: 0;
+    border-top: none;
+  }
+  .topbar,
+  .main {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
 }
