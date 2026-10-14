@@ -42,14 +42,13 @@ cd frontend && npm run dev
 
 Open **http://localhost:5173** (use `localhost`, **not** `127.0.0.1`: the backend only allows the origin `http://localhost:5173`, so anything else gets `403 Origin not allowed` on POST/PATCH/DELETE). Go to **System status**: API and database should show "Operational" / "Connected".
 
-The dev server proxies `/api/*` to the backend, so the browser only talks to one origin and the session cookie stays first-party.
+The browser calls the backend directly at `VITE_API_URL` (see `.env.example`); `localhost:5173` and `localhost:3000` are the same site, so the session cookie works.
 
 ## Environment variables
 
-| Name                   | Default                 | Purpose                                                                                                                                                                                                   |
-| ---------------------- | ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `DEV_API_PROXY_TARGET` | `http://localhost:3000` | Where Vite forwards `/api` (dev server and `npm run preview`)                                                                                                                                             |
-| `VITE_API_BASE_URL`    | `/api`                  | Base URL the browser uses for API calls (path starting with `/`, or an http(s) URL). Leave unset unless you know you need cross-origin calls (then the backend `CORS_ORIGIN` must list this app's origin) |
+| Name           | Default | Purpose                                                                                                                                                      |
+| -------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `VITE_API_URL` | `/api`  | Base URL the browser uses for API calls, e.g. `http://localhost:3000/api`. The backend `CORS_ORIGIN` must list this app's origin. Leave unset behind nginx. |
 
 Only `VITE_*` variables are exposed to browser code; never put secrets in them.
 
@@ -57,9 +56,9 @@ Only `VITE_*` variables are exposed to browser code; never put secrets in them.
 
 | Command                           | Purpose                                             |
 | --------------------------------- | --------------------------------------------------- |
-| `npm run dev`                     | Dev server on :5173 (fixed port) with the API proxy |
+| `npm run dev`                     | Dev server on :5173 (fixed port)                    |
 | `npm run build`                   | Type-check, then production build into `dist/`      |
-| `npm run preview`                 | Serve `dist/` on :4173 with the same proxy          |
+| `npm run preview`                 | Serve `dist/` on :4173                              |
 | `npm run typecheck`               | `tsc --noEmit`                                      |
 | `npm run lint`                    | ESLint (type-aware, react-hooks, react-refresh)     |
 | `npm run format` / `format:check` | Prettier write / check                              |

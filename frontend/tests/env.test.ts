@@ -15,15 +15,15 @@ describe('parseApiBaseUrl', () => {
   });
 
   it('rejects anything else with a clear message', () => {
-    expect(() => parseApiBaseUrl('api')).toThrow(/Invalid VITE_API_BASE_URL/);
-    expect(() => parseApiBaseUrl('ftp://x/api')).toThrow(/Invalid VITE_API_BASE_URL/);
-    expect(() => parseApiBaseUrl('javascript:alert(1)')).toThrow(/Invalid VITE_API_BASE_URL/);
+    expect(() => parseApiBaseUrl('api')).toThrow(/Invalid VITE_API_URL/);
+    expect(() => parseApiBaseUrl('ftp://x/api')).toThrow(/Invalid VITE_API_URL/);
+    expect(() => parseApiBaseUrl('javascript:alert(1)')).toThrow(/Invalid VITE_API_URL/);
   });
 });
 
 describe('loadConfig', () => {
-  it('reads VITE_API_BASE_URL from the environment object', () => {
-    expect(loadConfig({ VITE_API_BASE_URL: '/x/' } as ImportMetaEnv).apiBaseUrl).toBe('/x');
+  it('reads VITE_API_URL from the environment object', () => {
+    expect(loadConfig({ VITE_API_URL: '/x/' } as ImportMetaEnv).apiBaseUrl).toBe('/x');
     expect(loadConfig({} as ImportMetaEnv).apiBaseUrl).toBe('/api');
   });
 });

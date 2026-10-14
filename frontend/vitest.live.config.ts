@@ -4,7 +4,7 @@ import { defineConfig } from 'vitest/config';
 // Not part of `npm test`: it needs the API + a disposable database.
 export default defineConfig({
   define: {
-    'import.meta.env.VITE_API_BASE_URL': JSON.stringify(
+    'import.meta.env.VITE_API_URL': JSON.stringify(
       process.env['LIVE_API_BASE'] ?? 'http://localhost:3000/api',
     ),
   },

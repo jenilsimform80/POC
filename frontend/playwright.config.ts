@@ -50,6 +50,7 @@ export default defineConfig({
         },
         {
           command: 'npx vite',
+          env: { VITE_API_URL: 'http://127.0.0.1:3000/api' }, // same site as the 127.0.0.1 page: the cookie is kept
           url: 'http://127.0.0.1:5173',
           reuseExistingServer: false,
           timeout: 60_000,
