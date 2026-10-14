@@ -6,12 +6,13 @@
 
 FROM node:22-bookworm-slim AS build
 WORKDIR /app
-# The schema and Prisma config must exist before `npm ci` (its postinstall runs `prisma generate`).
+# The schema, Prisma config and tsconfig must exist before `npm ci` (its postinstall runs
+# `prisma generate`, which reads tsconfig.json to choose the import extension: without it the generated
+# client imports "./enums.ts" and the compiled output cannot start).
 COPY package.json package-lock.json ./
 COPY prisma ./prisma
-COPY prisma.config.ts ./
+COPY prisma.config.ts tsconfig.json tsconfig.build.json ./
 RUN npm ci
-COPY tsconfig.json tsconfig.build.json ./
 COPY src ./src
 COPY scripts ./scripts
 RUN npm run build

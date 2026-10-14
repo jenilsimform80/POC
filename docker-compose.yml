@@ -69,7 +69,7 @@ services:
     environment:
       NODE_ENV: development # the seed script refuses to run as production; this is the one-shot CLI only
       DATABASE_URL: postgresql://timesheets_app:${DB_APP_PASSWORD}@db:5432/${DB_NAME:-timesheets}?schema=public
-      SEED_PASSWORD: ${SEED_PASSWORD:?set SEED_PASSWORD (12+ characters) to seed demo users}
+      SEED_PASSWORD: ${SEED_PASSWORD:-} # optional here; seed.ts refuses to run unless it is 12+ characters
     depends_on:
       migrate: { condition: service_completed_successfully }
     restart: "no"
