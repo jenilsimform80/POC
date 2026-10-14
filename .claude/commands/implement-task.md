@@ -5,7 +5,7 @@ argument-hint: <task-id>
 
 Implement exactly one task: **$ARGUMENTS**
 
-1. Read `CLAUDE.md`, `tasks/phase-status.md` and the task in `tasks/backlog.md`. If the id is missing, unknown, or its phase is not approved in `phase-status.md`, stop and say so.
+1. Read `CLAUDE.md`, `.claude/tasks/phase-status.md` and the task in `.claude/tasks/backlog.md`. If the id is missing, unknown, or its phase is not approved in `phase-status.md`, stop and say so.
 2. Check its dependencies are Done. If not, stop and report.
 3. Inspect relevant existing code before editing; load the applicable skills in `.claude/skills/`.
 4. Set the task to In Progress, implement in small steps, and write the tests listed in its test expectations.

@@ -29,5 +29,5 @@ Consequences: trade-offs and follow-ups
 
 No further decisions are planned.
 
-## Phase 0 decisions (recorded in `tasks/phase-status.md`)
+## Phase 0 decisions (recorded in `.claude/tasks/phase-status.md`)
 Workspace root layout (no nested `poc/`), Git remote configured without pushing, requirements derived from the prompt only.

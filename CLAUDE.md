@@ -11,7 +11,7 @@ The owner is learning: explain significant decisions and trade-offs, and challen
 - Use stable releases only (no prerelease/RC). Justify every new dependency.
 
 ## Phase rules (most important)
-- Work proceeds in phases 0–10; the plan is in `tasks/backlog.md`, status in `tasks/phase-status.md`.
+- Work proceeds in phases 0–10; the plan is in `.claude/tasks/backlog.md`, status in `.claude/tasks/phase-status.md`.
 - Implement ONLY the currently approved phase. At phase end: stop, write the completion report (Summary, Files Changed, Verification, Decisions, Outstanding Issues, Next Phase, Phase status, "Approval required: Yes"), and wait for explicit approval.
 - One task at a time. Mark a task Done only after its acceptance criteria and tests are verified.
 - Never claim a test/build/migration/command passed unless it was actually run.
@@ -21,7 +21,7 @@ The owner is learning: explain significant decisions and trade-offs, and challen
 ## Folder responsibilities
 - `backend/src/routes` (URL + middleware wiring) → `controllers` (HTTP in/out only) → `services` (business rules, transactions) → data access via Prisma. `middleware/` for auth, validation, errors. `validation/` for Zod schemas.
 - `frontend/src`: feature-based folders; one centralized API client; UI is never the security boundary.
-- `docs/` design docs and ADRs (`docs/decisions/`); `tasks/` backlog and phase status; `.claude/skills|commands` workflows.
+- `docs/` design docs and ADRs (`docs/decisions/`); `.claude/tasks/` backlog and phase status; `.claude/skills|commands` workflows.
 
 ## Conventions
 - TypeScript strict; no unneeded `any`. camelCase vars/functions, PascalCase types/components, kebab-case file names for non-components, snake_case DB columns mapped via Prisma `@map`.

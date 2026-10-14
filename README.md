@@ -23,15 +23,15 @@ frontend/   React SPA, 186 unit/integration tests, 30 Playwright end-to-end test
 docker/     PostgreSQL role-separation init script
 scripts/    walkthrough.sh (runnable demo)
 docs/       requirements, architecture, database, API contracts, security, testing, deployment, walkthrough, ADRs 0001-0011, known limitations
-tasks/      backlog and phase status
+.claude/tasks/      backlog and phase status
 .claude/    project skills and slash commands for Claude Code
 ```
 
 ## Documentation map
-Architecture `docs/architecture.md` · Operations `docs/deployment.md` · Demo `docs/walkthrough.md` · API `docs/api-contracts.md` · Schema `docs/database-design.md` · Security `docs/security.md` · Tests `docs/testing-strategy.md` · Decisions `docs/decisions/` · Limits `docs/known-limitations.md` · Process `CLAUDE.md`, `tasks/`.
+Architecture `docs/architecture.md` · Operations `docs/deployment.md` · Demo `docs/walkthrough.md` · API `docs/api-contracts.md` · Schema `docs/database-design.md` · Security `docs/security.md` · Tests `docs/testing-strategy.md` · Decisions `docs/decisions/` · Limits `docs/known-limitations.md` · Process `CLAUDE.md`, `.claude/tasks/`.
 
 ## Quality gates
 `cd backend && npm run check` · `cd frontend && npm run check` · `cd frontend && npm run e2e` (real Chrome + real servers + a disposable `*_test` database). `npm audit`: 0 vulnerabilities in both packages.
 
 ## Status
-All development phases (0-10) are complete **except verification of the Docker artifacts**, which needs a machine with Docker. Phase history and decisions: `tasks/phase-status.md`.
+All development phases (0-10) are complete **except verification of the Docker artifacts**, which needs a machine with Docker. Phase history and decisions: `.claude/tasks/phase-status.md`.

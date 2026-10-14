@@ -3,7 +3,7 @@ description: Show the active phase, task progress, blockers and the next approve
 allowed-tools: Read, Bash(git status:*), Bash(git log:*)
 ---
 
-Read `tasks/phase-status.md` and `tasks/backlog.md`, and run `git status --short`.
+Read `.claude/tasks/phase-status.md` and `.claude/tasks/backlog.md`, and run `git status --short`.
 
 Report concisely:
 - Active phase and whether it is approved to proceed

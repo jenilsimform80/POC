@@ -9,7 +9,7 @@ Status values: Todo, In Progress, Blocked, Done. Priority: P0 (critical) – P2.
 - **Phase**: 0 · **Priority**: P0 · **Dependencies**: none · **Status**: Done (pending phase approval)
 - **Acceptance**: structure agreed; instructions and tracking exist; requirements and phase plan documented; nothing overwritten; next phase defined.
 - **Tests**: file/structure validation, frontmatter check, git status review.
-- **Files**: CLAUDE.md, README.md, .gitignore, `.claude/`, `docs/`, `tasks/`.
+- **Files**: CLAUDE.md, README.md, .gitignore, `.claude/`, `docs/`, `.claude/tasks/`.
 
 ### POC-DOC-001 Verify requirements against original spec
 - **Description**: When the original POC spec is supplied, review it and reconcile `docs/requirements.md`; remove the "unverified" banner only after review.
