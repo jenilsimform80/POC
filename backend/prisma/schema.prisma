@@ -55,52 +55,89 @@ model User {
   createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  manager       User?              @relation("ManagerReports", fields: [managerId], references: [id], onDelete: Restrict)
-  directReports User[]             @relation("ManagerReports")
-  timeEntries   TimeEntry[]
-  submissions   WeeklySubmission[]
-  approvals     Approval[]
-  lockedPeriods LockedPeriod[]
-  auditLogs     AuditLog[]
-  sessions      Session[]
+  manager            User?              @relation("ManagerReports", fields: [managerId], references: [id], onDelete: Restrict)
+  directReports      User[]             @relation("ManagerReports")
+  timeEntries        TimeEntry[]
+  submissions        WeeklySubmission[]
+  approvals          Approval[]
+  lockedPeriods      LockedPeriod[]
+  auditLogs          AuditLog[]
+  sessions           Session[]
+  projectMemberships ProjectMember[]
+  taskAssignments    TaskAssignee[]
+  createdTasks       Task[]             @relation("TaskCreator")
 
   @@index([managerId])
   @@map("users")
 }
 
 model Project {
-  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  code        String    @unique
-  name        String
-  clientName  String?   @map("client_name")
-  budgetHours Decimal   @map("budget_hours") @db.Decimal(10, 2)
-  startDate   DateTime? @map("start_date") @db.Date
-  endDate     DateTime? @map("end_date") @db.Date
-  isActive    Boolean   @default(true) @map("is_active")
-  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code         String    @unique
+  name         String
+  clientName   String?   @map("client_name")
+  budgetHours  Decimal   @map("budget_hours") @db.Decimal(10, 2)
+  startDate    DateTime? @map("start_date") @db.Date
+  endDate      DateTime? @map("end_date") @db.Date
+  isActive     Boolean   @default(true) @map("is_active")
+  // false: every signed-in user may log time here; true: only admins and listed members.
+  isRestricted Boolean   @default(false) @map("is_restricted")
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   tasks       Task[]
   timeEntries TimeEntry[]
+  members     ProjectMember[]
 
   @@map("projects")
 }
 
-model Task {
-  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+model ProjectMember {
   projectId String   @map("project_id") @db.Uuid
-  name      String
-  isActive  Boolean  @default(true) @map("is_active")
+  userId    String   @map("user_id") @db.Uuid
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  project     Project     @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@id([projectId, userId])
+  @@index([userId])
+  @@map("project_members")
+}
+
+model Task {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  projectId   String   @map("project_id") @db.Uuid
+  name        String
+  isActive    Boolean  @default(true) @map("is_active")
+  // Set when a manager creates the task (managers may only edit tasks they created); null for admin-created.
+  createdById String?  @map("created_by_id") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  project     Project        @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  createdBy   User?          @relation("TaskCreator", fields: [createdById], references: [id], onDelete: Restrict)
   timeEntries TimeEntry[]
+  assignees   TaskAssignee[]
 
   @@unique([projectId, name])
   // Target of the composite FK from time_entries: guarantees an entry's task belongs to its project.
   @@unique([id, projectId])
   @@map("tasks")
+}
+
+/// A task with no rows here is open to everyone who can use the project; with rows, only those users.
+model TaskAssignee {
+  taskId    String   @map("task_id") @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@id([taskId, userId])
+  @@index([userId])
+  @@map("task_assignees")
 }
 
 model TimeEntry {
