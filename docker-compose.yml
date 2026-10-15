@@ -61,7 +61,7 @@ services:
     networks: [internal]
 
   # Optional demo data (5 users, one per role pair) - NEVER for a real deployment:
-  #   SEED_PASSWORD='<12+ chars>' docker compose --profile demo run --rm seed
+  #   SEED_PASSWORD='<8+ chars>' docker compose --profile demo run --rm seed
   seed:
     profiles: ["demo"]
     build: { context: ./backend, target: build }
@@ -69,7 +69,7 @@ services:
     environment:
       NODE_ENV: development # the seed script refuses to run as production; this is the one-shot CLI only
       DATABASE_URL: postgresql://timesheets_app:${DB_APP_PASSWORD}@db:5432/${DB_NAME:-timesheets}?schema=public
-      SEED_PASSWORD: ${SEED_PASSWORD:-} # optional here; seed.ts refuses to run unless it is 12+ characters
+      SEED_PASSWORD: ${SEED_PASSWORD:-} # optional here; seed.ts refuses to run unless it is 8+ characters
     depends_on:
       migrate: { condition: service_completed_successfully }
     restart: "no"

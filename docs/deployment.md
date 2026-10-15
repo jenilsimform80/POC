@@ -37,7 +37,7 @@ Prerequisites: Docker Engine with the Compose plugin (v2), ~2 GB disk.
    Use alphanumeric passwords (they are embedded in connection URLs). `.env` is git-ignored; never commit it. Compose refuses to start while a required variable is missing.
 2. Start: `docker compose up --build`  →  open **http://localhost:8080**.
    Startup order is enforced: `db` (healthy) → `migrate` (applies the committed Prisma migrations, exits) → `backend` (healthy) → `web`.
-3. Demo data (optional, **never for a real deployment**): `SEED_PASSWORD='<12+ chars>' docker compose --profile demo run --rm seed` creates `admin@`, `manager@`, `other.manager@`, `dev1@`, `dev2@example.com` with that password. The seed script refuses to run as production, so the one-shot `seed` service sets `NODE_ENV=development` for itself only.
+3. Demo data (optional, **never for a real deployment**): `SEED_PASSWORD='<8+ chars>' docker compose --profile demo run --rm seed` creates `admin@`, `manager@`, `other.manager@`, `dev1@`, `dev2@example.com` with that password. The seed script refuses to run as production, so the one-shot `seed` service sets `NODE_ENV=development` for itself only.
 4. Operate:
    | Task | Command |
    |------|---------|
@@ -78,7 +78,7 @@ Prerequisites: Node.js ≥ 22.12, npm, PostgreSQL 14+ (a local server you can cr
    npm ci
    npx prisma migrate deploy        # apply the committed migrations to the dev database
    npm run db:migrate:test          # ...and to the test database
-   SEED_PASSWORD='<12+ chars>' npm run db:seed                 # demo users (dev only)
+   SEED_PASSWORD='<8+ chars>' npm run db:seed                 # demo users (dev only)
    npm run dev                                                 # API on :3000
    ```
 3. **Frontend** (second terminal)
