@@ -45,7 +45,7 @@ Cookie `sid` (HttpOnly, SameSite=Lax, Secure in production) identifies the sessi
 ### GET /api/auth/me
 - Auth: session. 200 `{ "user": {…} }`; 401 `UNAUTHENTICATED`.
 
-## Users (Phase 3 — scoping rules demonstrated; user administration comes later)
+## Users (Phase 3 scoping rules; admin user creation added after Phase 10, ADR 0012)
 All routes require a session (401 otherwise). Scope by role:
 | Role | Sees |
 |------|------|
@@ -55,6 +55,16 @@ All routes require a session (401 otherwise). Scope by role:
 
 ### GET /api/users
 200 `{ "users": [{ id, email, name, role, managerId, isActive }] }` limited to the caller's scope.
+
+### POST /api/users
+**ADMIN only** (401 anonymous, 403 anyone else). Creates an account; there is no public signup.
+Body (strict, unknown fields → 400): `{ email, name, role, password, managerId? }`
+- `email`: trimmed, lower-cased, valid, ≤ 254. `name`: 1–120. `password`: 12–128 characters (stored as an argon2id hash, never returned).
+- `role`: `CONTRIBUTOR` or `MANAGER` only (admins cannot be created through the API).
+- `managerId`: **required** for `CONTRIBUTOR`, **forbidden** for `MANAGER` (400 `VALIDATION_ERROR` otherwise).
+
+201 `{ "user": { id, email, name, role, managerId, isActive } }`.
+Errors: 400 `VALIDATION_ERROR`; 409 `CONFLICT` (email already exists, case-insensitive); 422 `BUSINESS_RULE_VIOLATION` (`managerId` is not an active user with role MANAGER).
 
 ### GET /api/users/direct-reports
 MANAGER only (403 `FORBIDDEN` otherwise, including ADMIN). 200 `{ "users": […] }`.
