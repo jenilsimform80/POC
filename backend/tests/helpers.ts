@@ -19,6 +19,7 @@ export const testEnv: Env = {
   LOGIN_RATE_LIMIT_MAX: 1000,
   LOGIN_RATE_LIMIT_WINDOW_MINUTES: 15,
   CORS_ORIGIN: ['http://localhost:5173'],
+  API_DOCS_ENABLED: undefined, // default: on outside production
 };
 
 export interface ApiErrorBody {

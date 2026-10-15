@@ -7,6 +7,7 @@ import { createErrorHandler, notFoundHandler } from './middleware/error-handler.
 import { sessionCookieName } from './auth/session.service.js';
 import { createOriginCheck } from './middleware/origin-check.js';
 import { rejectNulBytes } from './middleware/reject-nul.js';
+import { mountApiDocs } from './routes/docs.routes.js';
 import { createApiRouter, type AppDependencies } from './routes/index.js';
 
 export function createApp(env: Env, deps: AppDependencies): Express {
@@ -31,6 +32,7 @@ export function createApp(env: Env, deps: AppDependencies): Express {
   app.use(cookieParser());
   app.use(createOriginCheck(env.CORS_ORIGIN));
 
+  mountApiDocs(app, env);
   app.use('/api', createApiRouter(deps, env));
 
   app.use(notFoundHandler);

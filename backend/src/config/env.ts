@@ -28,6 +28,12 @@ const envSchema = z.object({
   // Coarse cap on ALL login attempts per IP (successful ones cost an argon2 hash and a session row).
   LOGIN_ATTEMPT_LIMIT_MAX: z.coerce.number().int().min(1).default(100),
   LOGIN_RATE_LIMIT_WINDOW_MINUTES: z.coerce.number().positive().default(15),
+  // Swagger UI at /api-docs. Unset = on outside production, off in production (a public API map is
+  // reconnaissance help). Set to "true"/"false" to override.
+  API_DOCS_ENABLED: z
+    .enum(['true', 'false'])
+    .optional()
+    .transform((value) => (value === undefined ? undefined : value === 'true')),
   CORS_ORIGIN: z
     .string()
     .default('http://localhost:5173')
