@@ -7,7 +7,8 @@ import {
   listDirectReports,
   listVisibleUsers,
 } from '../services/authorization.service.js';
-import type { getUserSchemas } from '../validation/users.schemas.js';
+import { createUser } from '../services/user.service.js';
+import type { createUserSchemas, getUserSchemas } from '../validation/users.schemas.js';
 
 export function createUsersController(prisma: PrismaClient) {
   const list: RequestHandler = async (req, res) => {
@@ -23,5 +24,10 @@ export function createUsersController(prisma: PrismaClient) {
     res.status(200).json({ user: await getVisibleUser(prisma, requireAuth(req), params.id) });
   };
 
-  return { list, directReports, getById };
+  const create: RequestHandler = async (req, res) => {
+    const { body } = getValidated<typeof createUserSchemas>(res);
+    res.status(201).json({ user: await createUser(prisma, body) });
+  };
+
+  return { list, directReports, getById, create };
 }
