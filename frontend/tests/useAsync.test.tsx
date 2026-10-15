@@ -1,4 +1,5 @@
-import { act, renderHook, waitFor } from '@testing-library/react';
+import { act, render, renderHook, screen, waitFor } from '@testing-library/react';
+import { StrictMode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { useAsync } from '../src/hooks/useAsync';
 
@@ -89,6 +90,7 @@ describe('useAsync', () => {
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
 
     const { unmount } = renderHook(() => useAsync(load));
+    await waitFor(() => expect(load).toHaveBeenCalled()); // the request is in flight
     unmount();
     pending.resolve('late');
     await Promise.resolve();
@@ -97,14 +99,26 @@ describe('useAsync', () => {
     expect(errorSpy).not.toHaveBeenCalled(); // no "state update on unmounted component"
   });
 
+  it('sends nothing at all if it unmounts before the request would start', async () => {
+    const load = vi.fn(() => Promise.resolve('data'));
+
+    const { unmount } = renderHook(() => useAsync(load));
+    unmount();
+    await new Promise((resolve) => setTimeout(resolve, 20));
+
+    expect(load).not.toHaveBeenCalled();
+  });
+
   it('ignores a slow response from a request that was superseded by reload()', async () => {
     const first = deferred<string>();
     const second = deferred<string>();
     const calls = [first, second];
     const load = vi.fn(() => calls.shift()!.promise);
     const { result } = renderHook(() => useAsync(load));
+    await waitFor(() => expect(load).toHaveBeenCalledTimes(1)); // first request in flight
 
     act(() => result.current.reload());
+    await waitFor(() => expect(load).toHaveBeenCalledTimes(2));
     second.resolve('fresh');
     await waitFor(() => expect(result.current.state).toEqual({ status: 'success', data: 'fresh' }));
     first.resolve('stale');
@@ -113,5 +127,22 @@ describe('useAsync', () => {
     });
 
     expect(result.current.state).toEqual({ status: 'success', data: 'fresh' });
+  });
+
+  it('sends ONE request under StrictMode (no cancelled-then-repeated pair in development)', async () => {
+    const load = vi.fn(() => Promise.resolve('data'));
+    function Probe() {
+      const { state } = useAsync(load);
+      return <p>{state.status}</p>;
+    }
+
+    render(
+      <StrictMode>
+        <Probe />
+      </StrictMode>,
+    );
+
+    await screen.findByText('success');
+    expect(load).toHaveBeenCalledTimes(1);
   });
 });

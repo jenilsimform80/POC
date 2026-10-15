@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { deferStart } from '../lib/defer-start';
 
 export type AsyncState<T> =
   { status: 'loading' } | { status: 'success'; data: T } | { status: 'error'; error: Error };
@@ -30,19 +31,24 @@ export function useAsync<T>(load: (signal: AbortSignal) => Promise<T>) {
 
   useEffect(() => {
     const controller = new AbortController();
-    load(controller.signal).then(
-      (data) => {
-        if (!controller.signal.aborted) {
-          setSettled({ source: load, attempt, outcome: { status: 'success', data } });
-        }
-      },
-      (error: unknown) => {
-        if (controller.signal.aborted) return;
-        const err = error instanceof Error ? error : new Error('Unknown error');
-        setSettled({ source: load, attempt, outcome: { status: 'error', error: err } });
-      },
-    );
-    return () => controller.abort();
+    const cancelStart = deferStart(() => {
+      load(controller.signal).then(
+        (data) => {
+          if (!controller.signal.aborted) {
+            setSettled({ source: load, attempt, outcome: { status: 'success', data } });
+          }
+        },
+        (error: unknown) => {
+          if (controller.signal.aborted) return;
+          const err = error instanceof Error ? error : new Error('Unknown error');
+          setSettled({ source: load, attempt, outcome: { status: 'error', error: err } });
+        },
+      );
+    });
+    return () => {
+      cancelStart();
+      controller.abort();
+    };
   }, [load, attempt]);
 
   const reload = useCallback(() => setAttempt((n) => n + 1), []);

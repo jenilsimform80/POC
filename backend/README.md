@@ -28,7 +28,7 @@ npm run db:migrate:test   # applies migrations to the test database (needed befo
 There is no registration API yet. Create demo users (admin, two managers, two contributors, all `@example.com`) with a password you choose:
 
 ```bash
-SEED_PASSWORD='choose-12+-chars' npm run db:seed
+SEED_PASSWORD='choose-8+-chars' npm run db:seed
 ```
 
 Re-running updates the password. Then `POST /api/auth/login` with e.g. `dev1@example.com`. See `docs/api-contracts.md` for the endpoints and `docs/decisions/0003-session-strategy.md` for the design.
@@ -40,8 +40,18 @@ Re-running updates the password. Then `POST /api/auth/login` with e.g. `dev1@exa
 | `NODE_ENV`    | `development`           | `development`, `test` or `production`   |
 | `PORT`        | `3000`                  | HTTP port (1-65535)                     |
 | `CORS_ORIGIN` | `http://localhost:5173` | Comma-separated allowed browser origins |
+| `API_DOCS_ENABLED` | on outside production, off in production | `true`/`false`: serve Swagger UI and the OpenAPI JSON |
 
 Variables are validated with Zod at startup ([src/config/env.ts](src/config/env.ts)); invalid values stop the process with a readable error.
+
+## API documentation (Swagger UI)
+
+With the backend running, open **http://localhost:3000/api-docs** (UI) or **http://localhost:3000/api-docs.json** (OpenAPI 3.0 document). They are served only outside production unless `API_DOCS_ENABLED=true`.
+
+1. Expand `POST /auth/login`, click **Try it out**, enter a user (see *Demo users*) and **Execute**. The browser stores the HttpOnly session cookie and sends it on every later call. The *Authorize* button is informational: Swagger UI cannot set a `Cookie` header itself.
+2. Write calls (POST/PATCH/DELETE) from the page send `Origin: http://localhost:3000`, which the CSRF allow-list rejects (403) unless it is in `CORS_ORIGIN`. Add it (`CORS_ORIGIN=http://localhost:5173,http://localhost:3000`), restart, then log in on the docs page.
+
+Request schemas are generated from the same Zod validators the routes use; response schemas live in [src/docs/components.ts](src/docs/components.ts) and the endpoint list in [src/docs/operations.ts](src/docs/operations.ts). `tests/openapi.test.ts` fails if a route is added without documentation or if a real response stops matching its documented schema. When you add or change an endpoint, update `src/docs/operations.ts` (and `components.ts` for a new response shape).
 
 ## Commands
 

@@ -26,7 +26,8 @@ Consequences: trade-offs and follow-ups
 | 0009 | [Frontend features: structure, state handling, UI-vs-backend](0009-frontend-features.md) | Accepted |
 | 0010 | [Phase 9 hardening decisions and e2e approach](0010-phase-9-hardening-and-e2e.md) | Accepted |
 | 0011 | [Delivery topology: Docker Compose, nginx, two database roles](0011-delivery-topology.md) | Accepted (Docker artifacts unexecuted) |
-| 0012 | [Admin-only user creation](0012-admin-user-creation.md) | Accepted |
+| 0012 | [Admin-only user administration](0012-admin-user-creation.md) | Accepted |
+| 0013 | [OpenAPI document and Swagger UI](0013-openapi-swagger-ui.md) | Accepted |
 
 No further decisions are planned.
 

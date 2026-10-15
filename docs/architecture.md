@@ -30,4 +30,4 @@ Server-side `HttpOnly` sessions (hashed 256-bit token, rotation, absolute expiry
 Hours by contributor / project / month (any combination) and the project budget report are single SQL aggregations scoped by role; indexes were chosen from `EXPLAIN` on 600 k rows (ADR 0007).
 
 ## Where to read more
-Decisions: `docs/decisions/` (0001-0011). API contracts: `api-contracts.md`. Schema: `database-design.md`. Security: `security.md`. Tests: `testing-strategy.md`. Operations: `deployment.md`. Demo: `walkthrough.md`. Limits: `known-limitations.md`.
+Decisions: `docs/decisions/` (0001-0013). API contracts: `api-contracts.md`. Schema: `database-design.md`. Security: `security.md`. Tests: `testing-strategy.md`. Operations: `deployment.md`. Demo: `walkthrough.md`. Limits: `known-limitations.md`.

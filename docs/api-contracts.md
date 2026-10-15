@@ -2,6 +2,9 @@
 
 Status: Phase 6 — contracts for every implemented endpoint (health, auth, users, projects, time entries, timesheets, submissions, locked periods, audit, reports). Contracts are written before implementation and kept in step with the tests.
 
+## Interactive documentation
+Swagger UI: `GET /api-docs`; OpenAPI 3.0 JSON: `GET /api-docs.json` (outside `/api`, served only when `API_DOCS_ENABLED` is true, which defaults to on outside production). Both describe the same 35 operations as this file; request schemas are generated from the route validators and a test checks every real response against the documented schema (ADR 0013). This file stays the human-readable reference for rules and rationale.
+
 ## Conventions
 - Base path `/api`; JSON bodies; plural nouns (`/api/time-entries`).
 - Auth required unless stated; role and ownership rules listed per endpoint.
@@ -34,6 +37,9 @@ Status: Phase 6 — contracts for every implemented endpoint (health, auth, user
 ## Authentication (Phase 3)
 Cookie `sid` (HttpOnly, SameSite=Lax, Secure in production) identifies the session. Browsers must send credentials (`fetch(..., { credentials: 'include' })`). State-changing requests from a browser `Origin` that is not in `CORS_ORIGIN` get 403.
 
+### POST /api/auth/change-password
+Auth: session. Body `{ currentPassword, newPassword (8–128) }`. 204; the user's **other** sessions are deleted, the current one stays. 401 `UNAUTHENTICATED` (wrong current password — counts toward the failed-login rate limit), 422 (new equals current), 400 validation.
+
 ### POST /api/auth/login
 - Auth: none. Body: `{ "email": string, "password": string }` (email trimmed and lower-cased; password 1–128 chars).
 - 200: `{ "user": { id, email, name, role, managerId } }` and `Set-Cookie: sid=…`
@@ -59,12 +65,23 @@ All routes require a session (401 otherwise). Scope by role:
 ### POST /api/users
 **ADMIN only** (401 anonymous, 403 anyone else). Creates an account; there is no public signup.
 Body (strict, unknown fields → 400): `{ email, name, role, password, managerId? }`
-- `email`: trimmed, lower-cased, valid, ≤ 254. `name`: 1–120. `password`: 12–128 characters (stored as an argon2id hash, never returned).
+- `email`: trimmed, lower-cased, valid, ≤ 254. `name`: 1–120. `password`: 8–128 characters (stored as an argon2id hash, never returned).
 - `role`: `CONTRIBUTOR` or `MANAGER` only (admins cannot be created through the API).
 - `managerId`: **required** for `CONTRIBUTOR`, **forbidden** for `MANAGER` (400 `VALIDATION_ERROR` otherwise).
 
 201 `{ "user": { id, email, name, role, managerId, isActive } }`.
 Errors: 400 `VALIDATION_ERROR`; 409 `CONFLICT` (email already exists, case-insensitive); 422 `BUSINESS_RULE_VIOLATION` (`managerId` is not an active user with role MANAGER).
+
+### PATCH /api/users/:id
+**ADMIN only.** Body (strict; at least one field): `{ name?, role?, managerId?, isActive? }`; `role` is `CONTRIBUTOR` or `MANAGER`; `managerId` is a UUID or `null`. Email cannot be changed.
+200 `{ "user": {…} }`. Errors: 400 `VALIDATION_ERROR`; 404 `NOT_FOUND`; 422 `BUSINESS_RULE_VIOLATION` when:
+- the target is an **ADMIN** (admin accounts are not editable through the API, which also prevents locking out the last admin);
+- the result is inconsistent: a contributor without an **active manager** (checked while the account is or becomes active), a manager with a manager, a user as their own manager;
+- a manager who still has **active direct reports** would be deactivated or demoted (reassign them first).
+Setting `isActive: false` deletes all of the user's sessions at once. Concurrent user-administration writes are serialized with one advisory lock, so a manager cannot be deactivated while a report is being assigned to them.
+
+### POST /api/users/:id/password
+**ADMIN only.** Body `{ "password": 8–128 chars }`. 204. Replaces the user's password and deletes all their sessions. 404 unknown user; 422 for an ADMIN target (admins change their own password).
 
 ### GET /api/users/direct-reports
 MANAGER only (403 `FORBIDDEN` otherwise, including ADMIN). 200 `{ "users": […] }`.

@@ -34,7 +34,9 @@
 - Phase 9 (ADR 0010): fail-safe `NODE_ENV=production` default, `__Host-sid` cookie in production, `TRUST_PROXY` hop count, `no-store` + `Vary: Cookie`, coarse login limiter, central NUL rejection, budgets hidden from non-admins; committed Playwright e2e suite on a guarded disposable database.
 - Phase 10 (ADR 0011): Compose with db/migrate/backend/web(+seed), nginx same-origin proxy with CSP and security headers, two database roles (owner for migrations, non-owner for the app), runtime image `--omit=dev --omit=optional` (91 MB vs 344 MB), runnable `scripts/walkthrough.sh`; e2e parameterized to test an external (production-like) stack and a CSP-violation test added.
 
-- Post-Phase 10 change (ADR 0012, requested by the owner): admin-only user creation — `POST /api/users` and a `/users` page. Not a numbered phase; awaiting the owner's review.
+- Post-Phase 10 change (ADR 0012, requested by the owner): admin-only user administration — create, edit, deactivate/reactivate, reset password (`/users` page) plus self-service change password (`/account`). Not a numbered phase; awaiting the owner's review.
+
+- Post-Phase 10 change (ADR 0013, requested by the owner): Swagger UI at `/api-docs` and OpenAPI JSON at `/api-docs.json` (documentation only; off in production by default; new dependency `swagger-ui-express`). Awaiting the owner's review.
 
 ## Environment findings
 Node v22.18.0, npm 11.5.2, git 2.34.1, Claude Code 2.1.246, PostgreSQL 14.24 (role `timesheets` and databases `timesheets_dev`/`timesheets_test` created by the owner; connectivity verified), Docker not installed.

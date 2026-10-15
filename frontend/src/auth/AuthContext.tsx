@@ -1,6 +1,7 @@
 import { createContext, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { getCurrentUser, login as loginRequest, logout as logoutRequest } from '../api/auth';
 import { setUnauthorizedHandler } from '../api/client';
+import { deferStart } from '../lib/defer-start';
 import type { User } from '../api/types';
 
 export type AuthState =
@@ -27,18 +28,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const controller = new AbortController();
-    getCurrentUser(controller.signal).then(
-      (user) => {
-        if (controller.signal.aborted) return;
-        setState(user ? { status: 'authenticated', user } : { status: 'anonymous' });
-      },
-      () => {
-        // Cannot tell (network/server problem): treat as signed out; the login page will show
-        // the real error when the user tries to sign in.
-        if (!controller.signal.aborted) setState({ status: 'anonymous' });
-      },
-    );
-    return () => controller.abort();
+    const cancelStart = deferStart(() => {
+      getCurrentUser(controller.signal).then(
+        (user) => {
+          if (controller.signal.aborted) return;
+          setState(user ? { status: 'authenticated', user } : { status: 'anonymous' });
+        },
+        () => {
+          // Cannot tell (network/server problem): treat as signed out; the login page will show
+          // the real error when the user tries to sign in.
+          if (!controller.signal.aborted) setState({ status: 'anonymous' });
+        },
+      );
+    });
+    return () => {
+      cancelStart();
+      controller.abort();
+    };
   }, []);
 
   useEffect(() => {
