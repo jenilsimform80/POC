@@ -99,6 +99,15 @@ describe('POST /api/users — creating accounts', () => {
     });
   });
 
+  it('creates a manager under another manager (who then approves their timesheet)', async () => {
+    const res = await create(
+      'admin',
+      valid({ email: 'junior.mgr@t.dev', role: 'MANAGER', managerId }),
+    );
+    expect(res.status).toBe(201);
+    expect((res.body as { user: { managerId: unknown } }).user.managerId).toBe(managerId);
+  });
+
   it('lower-cases and trims the email', async () => {
     const res = await create('admin', valid({ email: '  Mixed.Case@T.dev ', name: ' Padded ' }));
     expect(res.status).toBe(201);
@@ -147,7 +156,6 @@ describe('POST /api/users — rejected input', () => {
     ['unknown role', { role: 'SUPERUSER' }],
     ['malformed managerId', { managerId: 'nope' }],
     ['contributor without manager', { managerId: undefined }],
-    ['manager with a manager', { role: 'MANAGER' }],
     ['unknown field (mass assignment)', { isActive: false, passwordHash: 'x' }],
   ])('refuses %s with 400', async (_label, over) => {
     const res = await create('admin', valid({ email: 'case@t.dev', ...over }));

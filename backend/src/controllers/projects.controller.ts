@@ -28,26 +28,30 @@ export function createProjectsController(prisma: PrismaClient) {
       .json({ project: await projects.getProject(prisma, requireAuth(req), params.id) });
   };
 
-  const create: RequestHandler = async (_req, res) => {
+  const create: RequestHandler = async (req, res) => {
     const { body } = getValidated<typeof createProjectSchemas>(res);
-    res.status(201).json({ project: await projects.createProject(prisma, body) });
+    res.status(201).json({ project: await projects.createProject(prisma, requireAuth(req), body) });
   };
 
-  const update: RequestHandler = async (_req, res) => {
+  const update: RequestHandler = async (req, res) => {
     const { params, body } = getValidated<typeof updateProjectSchemas>(res);
-    res.status(200).json({ project: await projects.updateProject(prisma, params.id, body) });
-  };
-
-  const addTask: RequestHandler = async (_req, res) => {
-    const { params, body } = getValidated<typeof createTaskSchemas>(res);
-    res.status(201).json({ task: await projects.createTask(prisma, params.id, body.name) });
-  };
-
-  const patchTask: RequestHandler = async (_req, res) => {
-    const { params, body } = getValidated<typeof updateTaskSchemas>(res);
     res
       .status(200)
-      .json({ task: await projects.updateTask(prisma, params.id, params.taskId, body) });
+      .json({ project: await projects.updateProject(prisma, requireAuth(req), params.id, body) });
+  };
+
+  const addTask: RequestHandler = async (req, res) => {
+    const { params, body } = getValidated<typeof createTaskSchemas>(res);
+    res
+      .status(201)
+      .json({ task: await projects.createTask(prisma, requireAuth(req), params.id, body) });
+  };
+
+  const patchTask: RequestHandler = async (req, res) => {
+    const { params, body } = getValidated<typeof updateTaskSchemas>(res);
+    res.status(200).json({
+      task: await projects.updateTask(prisma, requireAuth(req), params.id, params.taskId, body),
+    });
   };
 
   return { list, get, create, update, addTask, patchTask };

@@ -4,6 +4,7 @@ import { AppError } from '../errors/app-error.js';
 import type { PrismaClient } from '../generated/prisma/client.js';
 import { addDays, mondayOf, toIsoDate } from '../utils/dates.js';
 import type { Db } from './db-types.js';
+import { accessibleProjectsWhere, canLogToTask } from './project.service.js';
 import { assertDatesUnlocked, mapPeriodLockDatabaseError } from './period-lock.service.js';
 import { assertDailyLimit, evaluateWarnings, type TimesheetWarning } from './timesheet-rules.js';
 
@@ -86,14 +87,20 @@ async function assertWeekEditable(tx: Db, userId: string, workDate: Date): Promi
   }
 }
 
-/** Project must be active; task must be active and belong to it; date inside project window. */
+/**
+ * Project must be visible to the user and active; task must be active, belong to it and be open
+ * to the user (not assigned only to others); date inside project window.
+ */
 async function assertProjectTaskUsable(
   tx: Db,
+  actor: AuthUser,
   projectId: string,
   taskId: string,
   workDate: Date,
 ): Promise<void> {
-  const project = await tx.project.findUnique({ where: { id: projectId } });
+  const project = await tx.project.findFirst({
+    where: { AND: [{ id: projectId }, accessibleProjectsWhere(actor)] },
+  });
   if (!project) throw new AppError('NOT_FOUND', 404, 'Project not found');
   if (!project.isActive) {
     throw new AppError(
@@ -102,12 +109,18 @@ async function assertProjectTaskUsable(
       'Project is archived; time cannot be logged',
     );
   }
-  const task = await tx.task.findFirst({ where: { id: taskId, projectId } });
+  const task = await tx.task.findFirst({
+    where: { id: taskId, projectId },
+    include: { assignees: { select: { userId: true } } },
+  });
   if (!task) {
     throw new AppError('BUSINESS_RULE_VIOLATION', 422, 'Task does not belong to the project');
   }
   if (!task.isActive) {
     throw new AppError('BUSINESS_RULE_VIOLATION', 422, 'Task is archived; time cannot be logged');
+  }
+  if (!canLogToTask(actor, task)) {
+    throw new AppError('BUSINESS_RULE_VIOLATION', 422, 'This task is assigned to other people');
   }
   if (
     (project.startDate && workDate < project.startDate) ||
@@ -144,7 +157,7 @@ export async function createEntry(prisma: PrismaClient, actor: AuthUser, input: 
     await lockUserTimesheet(tx, actor.id);
     await assertDatesUnlocked(tx, [input.workDate]);
     await assertWeekEditable(tx, actor.id, input.workDate);
-    await assertProjectTaskUsable(tx, input.projectId, input.taskId, input.workDate);
+    await assertProjectTaskUsable(tx, actor, input.projectId, input.taskId, input.workDate);
 
     const existing = await sumHours(tx, { userId: actor.id, workDate: { equals: input.workDate } });
     assertDailyLimit(existing + input.hours, toIsoDate(input.workDate));
@@ -254,7 +267,7 @@ export async function updateEntry(
       next.taskId !== current.taskId ||
       next.workDate.getTime() !== current.workDate.getTime();
     if (referencesChanged) {
-      await assertProjectTaskUsable(tx, next.projectId, next.taskId, next.workDate);
+      await assertProjectTaskUsable(tx, actor, next.projectId, next.taskId, next.workDate);
     }
 
     const others = await sumHours(tx, {

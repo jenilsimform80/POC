@@ -77,14 +77,15 @@ describe('PATCH /api/users/:id — editing', () => {
     });
   });
 
-  it('promotes a contributor to manager (manager cleared) and back with a new manager', async () => {
+  it('promotes a contributor to manager (keeping their manager) and back', async () => {
     const m = await manager();
     const c = await contributor(m.id);
 
     const up = await asAdmin.patch(c.id, { role: 'MANAGER' });
     expect(up.status).toBe(200);
-    expect((await row(c.id)).managerId).toBeNull();
+    expect((await row(c.id)).managerId).toBe(m.id);
 
+    expect((await asAdmin.patch(c.id, { managerId: null })).status).toBe(200);
     expect((await asAdmin.patch(c.id, { role: 'CONTRIBUTOR' })).status).toBe(422);
     const down = await asAdmin.patch(c.id, { role: 'CONTRIBUTOR', managerId: m.id });
     expect(down.status).toBe(200);
@@ -136,11 +137,16 @@ describe('PATCH /api/users/:id — manager integrity', () => {
     expect((await row(c.id)).managerId).toBe(m.id);
   });
 
-  it('refuses a manager with a manager, and a contributor without one', async () => {
+  it('lets a manager report to another manager, but refuses loops and a contributor without one', async () => {
     const m = await manager();
     const other = await manager();
     const c = await contributor(m.id);
-    expect((await asAdmin.patch(m.id, { managerId: other.id })).status).toBe(422);
+    expect((await asAdmin.patch(m.id, { managerId: other.id })).status).toBe(200);
+    expect((await row(m.id)).managerId).toBe(other.id);
+    // other -> m would close the loop other -> m -> other; self-management is refused too.
+    expect((await asAdmin.patch(other.id, { managerId: m.id })).status).toBe(422);
+    expect((await asAdmin.patch(other.id, { managerId: other.id })).status).toBe(422);
+    expect((await row(other.id)).managerId).toBeNull();
     expect((await asAdmin.patch(c.id, { managerId: null })).status).toBe(422);
   });
 

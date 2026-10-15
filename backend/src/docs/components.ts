@@ -95,7 +95,26 @@ export const componentSchemas: Record<string, Json> = {
     isActive: { type: 'boolean' },
   }),
 
-  Task: obj({ id: uuid, name: { type: 'string' }, isActive: { type: 'boolean' } }),
+  Task: obj(
+    {
+      id: uuid,
+      name: { type: 'string' },
+      isActive: { type: 'boolean' },
+      canLog: {
+        type: 'boolean',
+        description: 'false when the task is assigned only to other people.',
+      },
+      canManage: {
+        type: 'boolean',
+        description: 'true for admins and for the manager who created the task.',
+      },
+      assigneeIds: {
+        ...arrayOf(uuid),
+        description: 'Only present when `canManage`. Empty = open to everyone.',
+      },
+    },
+    ['id', 'name', 'isActive', 'canLog', 'canManage'],
+  ),
   Project: obj(
     {
       id: uuid,
@@ -109,9 +128,17 @@ export const componentSchemas: Record<string, Json> = {
       startDate: nullable(date),
       endDate: nullable(date),
       isActive: { type: 'boolean', description: 'false = archived.' },
+      isRestricted: {
+        type: 'boolean',
+        description: 'true = only members (and admins) can see it and log time to it.',
+      },
+      memberIds: {
+        ...arrayOf(uuid),
+        description: '**Admins only.** Members of a restricted project.',
+      },
       tasks: arrayOf(ref('Task')),
     },
-    ['id', 'code', 'name', 'clientName', 'startDate', 'endDate', 'isActive'],
+    ['id', 'code', 'name', 'clientName', 'startDate', 'endDate', 'isActive', 'isRestricted'],
   ),
 
   TimeEntry: obj({

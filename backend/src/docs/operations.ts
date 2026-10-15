@@ -32,7 +32,7 @@ import {
   updateUserSchemas,
 } from '../validation/users.schemas.js';
 
-export type Access = 'public' | 'any' | 'CONTRIBUTOR' | 'MANAGER' | 'ADMIN';
+export type Access = 'public' | 'any' | 'CONTRIBUTOR' | 'MANAGER' | 'ADMIN' | 'ADMIN_OR_MANAGER';
 type HttpMethod = 'get' | 'post' | 'patch' | 'delete';
 
 export interface RequestSchemas {
@@ -153,7 +153,7 @@ export const operations: OperationSpec[] = [
     tag: 'Users',
     summary: 'Create a contributor or manager',
     description:
-      'Admin only. There is no public signup. `managerId` is **required for CONTRIBUTOR** and **forbidden for MANAGER** (400). Admins cannot be created through the API. The password is stored as an argon2id hash and never returned.',
+      'Admin only. There is no public signup. `managerId` is **required for CONTRIBUTOR** and optional for MANAGER (a manager may report to another manager, who then approves their timesheet). Admins cannot be created through the API. The password is stored as an argon2id hash and never returned.',
     access: 'ADMIN',
     request: { body: createUserSchemas.body },
     success: { status: 201, description: 'User created.', schema: 'UserResult' },
@@ -195,7 +195,7 @@ export const operations: OperationSpec[] = [
     success: { status: 200, description: 'Updated user.', schema: 'UserResult' },
     errors: {
       404: 'No such user.',
-      422: 'Admin accounts cannot be changed here; a contributor needs an active manager, a manager has none; or a manager with active direct reports cannot be deactivated or demoted (`BUSINESS_RULE_VIOLATION`).',
+      422: 'Admin accounts cannot be changed here; a contributor needs an active manager; a manager can only report to an active manager, never in a loop; or a manager with active direct reports cannot be deactivated or demoted (`BUSINESS_RULE_VIOLATION`).',
     },
   },
   {
@@ -218,7 +218,7 @@ export const operations: OperationSpec[] = [
     tag: 'Projects',
     summary: 'List projects',
     description:
-      'Active projects with their active tasks. `budgetHours` is omitted for non-admins. `includeArchived=true` is admin only.',
+      'Active projects with their active tasks. Restricted projects appear only for their members (and admins). `budgetHours` and `memberIds` are omitted for non-admins. `includeArchived=true` is admin only.',
     access: 'any',
     request: { query: listProjectsSchemas.query },
     success: { status: 200, description: 'Projects.', schema: 'ProjectList' },
@@ -229,12 +229,14 @@ export const operations: OperationSpec[] = [
     path: '/projects',
     tag: 'Projects',
     summary: 'Create a project',
+    description:
+      'Set `isRestricted: true` with `memberIds` to limit the project to those users; otherwise every signed-in user can log time to it.',
     access: 'ADMIN',
     request: { body: createProjectSchemas.body },
     success: { status: 201, description: 'Project created.', schema: 'ProjectResult' },
     errors: {
       409: 'Project code already exists.',
-      422: '`endDate` is before `startDate`.',
+      422: '`endDate` is before `startDate`; `memberIds` given for an open project, or not all active contributors/managers.',
     },
   },
   {
@@ -245,7 +247,9 @@ export const operations: OperationSpec[] = [
     access: 'any',
     request: { params: projectIdSchemas.params },
     success: { status: 200, description: 'The project with its tasks.', schema: 'ProjectResult' },
-    errors: { 404: 'Not found, or archived and the caller is not an admin.' },
+    errors: {
+      404: 'Not found, archived (non-admin), or restricted and the caller is not a member.',
+    },
   },
   {
     method: 'patch',
@@ -253,14 +257,14 @@ export const operations: OperationSpec[] = [
     tag: 'Projects',
     summary: 'Edit or archive a project',
     description:
-      'Send at least one field. `isActive: false` archives (no deletion). Optional fields may be set to `null` to clear them.',
+      'Send at least one field. `isActive: false` archives (no deletion). Optional fields may be set to `null` to clear them. `memberIds` replaces the whole member list; removing a member blocks only new entries.',
     access: 'ADMIN',
     request: { params: updateProjectSchemas.params, body: updateProjectSchemas.body },
     success: { status: 200, description: 'Updated project.', schema: 'ProjectResult' },
     errors: {
       404: 'Project not found.',
       409: 'Project code already exists.',
-      422: '`endDate` is before `startDate`.',
+      422: '`endDate` is before `startDate`; invalid `memberIds`.',
     },
   },
   {
@@ -268,23 +272,33 @@ export const operations: OperationSpec[] = [
     path: '/projects/:id/tasks',
     tag: 'Projects',
     summary: 'Add a task to a project',
-    access: 'ADMIN',
+    description:
+      'Admins, and managers on projects they can see. `assigneeIds` limits who may log time to the task (empty or omitted = everyone who can use the project). A manager may only assign themself or their active direct reports; on a restricted project assignees must be members.',
+    access: 'ADMIN_OR_MANAGER',
     request: { params: createTaskSchemas.params, body: createTaskSchemas.body },
     success: { status: 201, description: 'Task created.', schema: 'TaskResult' },
     errors: {
-      404: 'Project not found.',
+      404: 'Project not found or not visible to the caller.',
       409: 'A task with this name already exists in the project.',
+      422: 'Invalid `assigneeIds`, or the project is archived (managers).',
     },
   },
   {
     method: 'patch',
     path: '/projects/:id/tasks/:taskId',
     tag: 'Projects',
-    summary: 'Rename or archive a task',
-    access: 'ADMIN',
+    summary: 'Rename, archive or re-assign a task',
+    description:
+      'Admins may change any task; managers only tasks they created (403 otherwise). `assigneeIds` replaces the assignee list; an empty list opens the task to everyone.',
+    access: 'ADMIN_OR_MANAGER',
     request: { params: updateTaskSchemas.params, body: updateTaskSchemas.body },
     success: { status: 200, description: 'Updated task.', schema: 'TaskResult' },
-    errors: { 404: 'Task not found in this project.', 409: 'Name already used in the project.' },
+    errors: {
+      403: 'A manager changing a task they did not create.',
+      404: 'Task or project not found (or project not visible).',
+      409: 'Name already used in the project.',
+      422: 'Invalid `assigneeIds`.',
+    },
   },
 
   // ---- Time entries ----

@@ -8,6 +8,7 @@ const code = z
   .max(32)
   .regex(/^[A-Za-z0-9._-]+$/, 'letters, digits, . _ - only');
 const name = z.string().trim().min(1).max(120);
+const userIds = z.array(uuid).max(500);
 const budgetHours = z.number().min(0).max(10_000_000).multipleOf(0.01);
 
 export const listProjectsSchemas = {
@@ -23,6 +24,8 @@ export const createProjectSchemas = {
     budgetHours,
     startDate: isoDate.optional(),
     endDate: isoDate.optional(),
+    isRestricted: z.boolean().optional(),
+    memberIds: userIds.optional(),
   }),
 };
 
@@ -37,18 +40,24 @@ export const updateProjectSchemas = {
       startDate: isoDate.nullable().optional(),
       endDate: isoDate.nullable().optional(),
       isActive: z.boolean().optional(),
+      isRestricted: z.boolean().optional(),
+      memberIds: userIds.optional(),
     })
     .refine((body) => Object.keys(body).length > 0, 'provide at least one field to update'),
 };
 
 export const createTaskSchemas = {
   params: z.object({ id: uuid }),
-  body: z.strictObject({ name }),
+  body: z.strictObject({ name, assigneeIds: userIds.optional() }),
 };
 
 export const updateTaskSchemas = {
   params: z.object({ id: uuid, taskId: uuid }),
   body: z
-    .strictObject({ name: name.optional(), isActive: z.boolean().optional() })
+    .strictObject({
+      name: name.optional(),
+      isActive: z.boolean().optional(),
+      assigneeIds: userIds.optional(),
+    })
     .refine((body) => Object.keys(body).length > 0, 'provide at least one field to update'),
 };

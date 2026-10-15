@@ -106,7 +106,8 @@ describe('creating and updating projects (admin only)', () => {
     });
   });
 
-  it.each(['dev', 'm'])('forbids %s from creating, updating or adding tasks', async (who) => {
+  it('forbids a contributor from creating, updating or adding tasks', async () => {
+    const who = 'dev';
     const target = await prisma.project.findUniqueOrThrow({ where: { code: 'LIVE' } });
     const before = await prisma.project.count();
 
@@ -121,6 +122,14 @@ describe('creating and updating projects (admin only)', () => {
     expect(await prisma.project.count()).toBe(before);
     expect((await prisma.project.findUniqueOrThrow({ where: { id: target.id } })).name).toBe(
       'Project LIVE',
+    );
+  });
+
+  it('forbids a manager from creating or updating projects (managers only add tasks)', async () => {
+    const target = await prisma.project.findUniqueOrThrow({ where: { code: 'LIVE' } });
+    expect((await as('m').post('/api/projects', { ...valid, code: 'NOPE' })).status).toBe(403);
+    expect((await as('m').patch(`/api/projects/${target.id}`, { name: 'Hacked' })).status).toBe(
+      403,
     );
   });
 
@@ -183,7 +192,7 @@ describe('creating and updating projects (admin only)', () => {
   });
 });
 
-describe('tasks (admin only)', () => {
+describe('tasks (admin)', () => {
   it('creates, renames and archives a task; names are unique per project', async () => {
     const project = await prisma.project.findUniqueOrThrow({ where: { code: 'LIVE' } });
 

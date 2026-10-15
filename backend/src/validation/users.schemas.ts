@@ -29,13 +29,6 @@ export const createUserSchemas = {
           message: 'a contributor needs a manager',
         });
       }
-      if (body.role === 'MANAGER' && body.managerId !== undefined) {
-        ctx.addIssue({
-          code: 'custom',
-          path: ['managerId'],
-          message: 'a manager cannot have a manager',
-        });
-      }
     }),
 };
 

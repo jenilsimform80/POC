@@ -53,6 +53,26 @@ async function assertActiveManager(tx: Db, managerId: string): Promise<void> {
 }
 
 /**
+ * Managers may report to another manager (so a manager's own timesheet has an approver), but the
+ * chain must never loop: A->B->A would leave both timesheets with no one able to decide. Walks up
+ * from the proposed manager; reaching `userId` means the assignment would close a cycle.
+ * Runs under the user-administration lock, so the chain cannot change while it is walked.
+ */
+async function assertNoManagerCycle(tx: Db, userId: string, managerId: string): Promise<void> {
+  const seen = new Set<string>();
+  let current: string | null = managerId;
+  while (current !== null && !seen.has(current)) {
+    if (current === userId) throw rule('This would create a reporting loop');
+    seen.add(current);
+    const row: { managerId: string | null } | null = await tx.user.findUnique({
+      where: { id: current },
+      select: { managerId: true },
+    });
+    current = row?.managerId ?? null;
+  }
+}
+
+/**
  * Admin-only (enforced by the route). A contributor must report to an active manager, because the
  * submit step requires one; the check lives here so every caller gets the same rule.
  */
@@ -85,7 +105,7 @@ export async function createUser(prisma: PrismaClient, input: CreateUserInput) {
 /**
  * Edit name, role, manager or active flag. Admin accounts are not editable here (so an admin cannot
  * demote or lock out the last admin, nor themself). The resulting state must be consistent:
- *  - a contributor has an active manager; a manager has none;
+ *  - a contributor has an active manager; a manager may have one (never forming a loop);
  *  - a manager with active direct reports cannot be deactivated or demoted (their reports could no
  *    longer submit): reassign the reports first.
  * Deactivating also ends the user's sessions immediately.
@@ -99,19 +119,16 @@ export async function updateUser(prisma: PrismaClient, userId: string, input: Up
 
     const role = input.role ?? target.role;
     const isActive = input.isActive ?? target.isActive;
-    // Becoming a manager clears the manager; an explicit managerId for a manager is refused.
-    let managerId = input.managerId === undefined ? target.managerId : input.managerId;
-    if (role === 'MANAGER') {
-      if (input.managerId) throw rule('A manager cannot have a manager');
-      managerId = null;
-    }
+    const managerId = input.managerId === undefined ? target.managerId : input.managerId;
 
-    if (role === 'CONTRIBUTOR') {
-      if (managerId === null) throw rule('A contributor needs a manager');
+    if (role === 'CONTRIBUTOR' && managerId === null) throw rule('A contributor needs a manager');
+    // A manager's own manager is optional (a top-level manager has none).
+    if (managerId !== null) {
       if (managerId === userId) throw rule('A user cannot be their own manager');
-      // Only checked while the account is (or becomes) active, so a deactivated contributor whose
+      // Only checked while the account is (or becomes) active, so a deactivated user whose
       // manager has since left can still be renamed; reactivating them forces a valid manager.
       if (isActive) await assertActiveManager(tx, managerId);
+      if (role === 'MANAGER') await assertNoManagerCycle(tx, userId, managerId);
     }
 
     const losesManagerRole = target.role === 'MANAGER' && (role !== 'MANAGER' || !isActive);

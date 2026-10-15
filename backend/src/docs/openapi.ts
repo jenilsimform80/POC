@@ -40,6 +40,7 @@ const ACCESS_TEXT: Record<Access, string> = {
   CONTRIBUTOR: 'Contributors only.',
   MANAGER: 'Role **MANAGER** only (403 otherwise).',
   ADMIN: 'Role **ADMIN** only (403 otherwise).',
+  ADMIN_OR_MANAGER: 'Roles **ADMIN** or **MANAGER** (403 otherwise).',
 };
 
 function buildOperation(op: OperationSpec): Json {
@@ -62,7 +63,7 @@ function buildOperation(op: OperationSpec): Json {
   const errors: Record<number, string> = {};
   if (request) errors[400] = 'Validation failed (`details` lists `{location, path, message}`).';
   if (op.access !== 'public') errors[401] = 'No valid session (`UNAUTHENTICATED`).';
-  if (op.access === 'MANAGER' || op.access === 'ADMIN') {
+  if (op.access === 'MANAGER' || op.access === 'ADMIN' || op.access === 'ADMIN_OR_MANAGER') {
     errors[403] = 'Your role is not allowed to do this (`FORBIDDEN`).';
   }
   Object.assign(errors, op.errors);
