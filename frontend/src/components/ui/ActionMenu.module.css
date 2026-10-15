@@ -1,0 +1,74 @@
+.trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.1rem;
+  height: 2.1rem;
+  padding: 0;
+  border-radius: var(--radius);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    color 0.15s,
+    border-color 0.15s;
+}
+.trigger:hover:not(:disabled),
+.trigger[aria-expanded='true'] {
+  background: var(--color-surface-alt);
+  color: var(--color-text);
+  border-color: var(--color-border);
+}
+.trigger:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.menu {
+  position: fixed;
+  z-index: 1000;
+  min-width: 11rem;
+  padding: 0.3rem;
+  margin: 0;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-md);
+  /* Hidden until positioned, so it never flashes at the wrong place. */
+  visibility: hidden;
+}
+.menu[data-ready='true'] {
+  visibility: visible;
+}
+
+.item {
+  display: block;
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--color-text);
+  font: inherit;
+  font-size: 0.9rem;
+  text-align: left;
+  cursor: pointer;
+}
+.item:hover:not(:disabled),
+.item:focus-visible {
+  background: var(--color-surface-alt);
+  outline: none;
+}
+.item:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.danger {
+  color: var(--color-danger);
+}
+.danger:hover:not(:disabled),
+.danger:focus-visible {
+  background: var(--color-danger-soft);
+}
