@@ -32,3 +32,23 @@ export async function getUser(id: string, signal?: AbortSignal): Promise<User> {
   const { user } = await apiRequest<{ user: User }>(`/users/${id}`, { ...(signal && { signal }) });
   return user;
 }
+
+export interface UserPatch {
+  name?: string;
+  role?: 'CONTRIBUTOR' | 'MANAGER';
+  managerId?: string | null;
+  isActive?: boolean;
+}
+
+export async function updateUser(id: string, patch: UserPatch): Promise<User> {
+  const { user } = await apiRequest<{ user: User }>(`/users/${id}`, {
+    method: 'PATCH',
+    body: patch,
+  });
+  return user;
+}
+
+/** Admin sets a new password for another user (ends that user's sessions). */
+export async function resetUserPassword(id: string, password: string): Promise<void> {
+  await apiRequest<void>(`/users/${id}/password`, { method: 'POST', body: { password } });
+}

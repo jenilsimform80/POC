@@ -12,6 +12,7 @@ export const ACCESS = {
   budgets: ['ADMIN'],
   periods: ['ADMIN'],
   users: ['ADMIN'],
+  account: ['CONTRIBUTOR', 'MANAGER', 'ADMIN'],
 } as const satisfies Record<string, readonly Role[]>;
 
 export type Area = keyof typeof ACCESS;

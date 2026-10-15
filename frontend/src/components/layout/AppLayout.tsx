@@ -13,6 +13,7 @@ import {
   ClockIcon,
   FolderIcon,
   HomeIcon,
+  KeyIcon,
   LockIcon,
   PulseIcon,
   UsersIcon,
@@ -36,6 +37,7 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/reports/budgets', label: 'Budgets', icon: <WalletIcon />, area: 'budgets' },
   { to: '/users', label: 'Users', icon: <UsersIcon />, area: 'users' },
   { to: '/periods', label: 'Locked periods', icon: <LockIcon />, area: 'periods' },
+  { to: '/account', label: 'Account', icon: <KeyIcon />, area: 'account' },
 ];
 
 const ROLE_LABEL = {

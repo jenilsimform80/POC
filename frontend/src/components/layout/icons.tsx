@@ -72,3 +72,9 @@ export const UsersIcon = () => (
     <path d="M16 5.2a3.2 3.2 0 010 5.6M18 14.4c1.8.9 3 2.8 3 5.6" />
   </Icon>
 );
+export const KeyIcon = () => (
+  <Icon>
+    <circle cx="8" cy="15" r="4" />
+    <path d="M11 12l9-9M16 7l3 3" />
+  </Icon>
+);

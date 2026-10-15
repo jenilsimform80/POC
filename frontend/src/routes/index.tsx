@@ -9,6 +9,7 @@ import { ProjectsPage } from '../features/projects/ProjectsPage';
 import { BudgetReportPage } from '../features/reports/BudgetReportPage';
 import { ReportsPage } from '../features/reports/ReportsPage';
 import { ReviewPage } from '../features/approvals/ReviewPage';
+import { AccountPage } from '../features/account/AccountPage';
 import { UsersPage } from '../features/users/UsersPage';
 import { TimesheetPage } from '../features/timesheet/TimesheetPage';
 import { HomePage } from '../pages/HomePage';
@@ -35,6 +36,7 @@ export const routes: RouteObject[] = [
         children: [
           { index: true, element: <HomePage /> },
           { path: 'timesheet', element: <TimesheetPage /> },
+          { path: 'account', element: <AccountPage /> },
           { path: 'projects', element: <ProjectsPage /> },
           { path: 'reports', element: <ReportsPage /> },
           {

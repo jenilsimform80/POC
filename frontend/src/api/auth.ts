@@ -28,3 +28,12 @@ export async function login(email: string, password: string): Promise<User> {
 export async function logout(): Promise<void> {
   await apiRequest<void>('/auth/logout', { method: 'POST', handleUnauthorized: false });
 }
+
+/** The user changes their own password. A wrong current password is a 401 that must NOT sign them out. */
+export async function changePassword(currentPassword: string, newPassword: string): Promise<void> {
+  await apiRequest<void>('/auth/change-password', {
+    method: 'POST',
+    body: { currentPassword, newPassword },
+    handleUnauthorized: false,
+  });
+}

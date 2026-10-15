@@ -102,9 +102,9 @@ tests-live/     opt-in contract check against a real backend (see below)
 `npm test` stubs `fetch`. To verify the wrappers and response shapes against the real API, run the backend against a **disposable** database (e.g. the backend's `TEST_DATABASE_URL`), seed the demo users, and run:
 
 ```bash
-cd backend && DATABASE_URL="$TEST_DATABASE_URL" SEED_PASSWORD='choose-12+-chars' npm run db:seed
+cd backend && DATABASE_URL="$TEST_DATABASE_URL" SEED_PASSWORD='choose-8+-chars' npm run db:seed
 cd backend && DATABASE_URL="$TEST_DATABASE_URL" npm run dev        # API on :3000
-cd frontend && LIVE_PASSWORD='choose-12+-chars' npm run test:live
+cd frontend && LIVE_PASSWORD='choose-8+-chars' npm run test:live
 ```
 
 It signs in as a contributor, a manager and an admin, and walks projects → entries → submit → reject → resubmit → approve → lock/unlock → reports/budgets, checking shapes and permission refusals. It writes data, so never point it at data you care about. Skipped automatically when `LIVE_PASSWORD` is not set.

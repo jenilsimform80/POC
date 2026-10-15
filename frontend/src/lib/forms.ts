@@ -1,5 +1,8 @@
 import { ApiError } from '../api/errors';
 
+/** Mirrors the backend minimum (MIN_PASSWORD_LENGTH); the server is the authority. */
+export const MIN_PASSWORD_LENGTH = 8;
+
 interface ValidationIssue {
   location: string;
   path: string;

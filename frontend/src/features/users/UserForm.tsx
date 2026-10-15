@@ -6,7 +6,7 @@ import { Button } from '../../components/ui/Button';
 import { SelectField, TextField } from '../../components/ui/FormControls';
 import { describeError } from '../../components/ui/describeError';
 import { useMutation } from '../../hooks/useMutation';
-import { fieldErrorsFrom } from '../../lib/forms';
+import { fieldErrorsFrom, MIN_PASSWORD_LENGTH } from '../../lib/forms';
 
 interface UserFormProps {
   /** Active managers a contributor can report to. */
@@ -17,8 +17,6 @@ interface UserFormProps {
 }
 
 type Field = 'name' | 'email' | 'role' | 'password' | 'managerId';
-
-const MIN_PASSWORD = 12;
 
 export function UserForm({ managers, onSave, onCancel }: UserFormProps) {
   const [name, setName] = useState('');
@@ -36,7 +34,8 @@ export function UserForm({ managers, onSave, onCancel }: UserFormProps) {
     const found: Partial<Record<Field, string>> = {};
     if (name.trim() === '') found.name = 'Enter the full name';
     if (!/^\S+@\S+\.\S+$/.test(email.trim())) found.email = 'Enter a valid email address';
-    if (password.length < MIN_PASSWORD) found.password = `Use at least ${MIN_PASSWORD} characters`;
+    if (password.length < MIN_PASSWORD_LENGTH)
+      found.password = `Use at least ${MIN_PASSWORD_LENGTH} characters`;
     if (role === 'CONTRIBUTOR' && managerId === '') found.managerId = 'Choose a manager';
     return found;
   };
@@ -112,7 +111,7 @@ export function UserForm({ managers, onSave, onCancel }: UserFormProps) {
           type="password"
           value={password}
           error={errors.password}
-          hint={`At least ${MIN_PASSWORD} characters. Share it with the user securely.`}
+          hint={`At least ${MIN_PASSWORD_LENGTH} characters. Share it with the user securely.`}
           autoComplete="new-password"
           onChange={(e) => setPassword(e.target.value)}
         />

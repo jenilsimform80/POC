@@ -2,9 +2,29 @@ import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import type { User } from '../src/api/types';
-import { fail, mockApi, ok, renderRoutes, signedInAs, users, type MockRequest } from './helpers';
+import {
+  fail,
+  mockApi,
+  noContent,
+  ok,
+  renderRoutes,
+  signedInAs,
+  users,
+  type MockRequest,
+} from './helpers';
 
-function userBackend(initial: User[] = [users.admin, users.manager, users.contributor]) {
+const secondManager: User = {
+  id: 'u-mgr2',
+  email: 'other.manager@example.com',
+  name: 'Olive Manager',
+  role: 'MANAGER',
+  managerId: null,
+  isActive: true,
+};
+
+function userBackend(
+  initial: User[] = [users.admin, users.manager, secondManager, users.contributor],
+) {
   const state = { users: [...initial], nextId: 1 };
   const handlers = {
     ...signedInAs(users.admin),
@@ -27,6 +47,12 @@ function userBackend(initial: User[] = [users.admin, users.manager, users.contri
       state.users.push(created);
       return ok({ user: created }, 201);
     },
+    'PATCH /users/:id': (req: MockRequest) => {
+      const i = state.users.findIndex((u) => u.id === req.params['id']);
+      state.users[i] = { ...state.users[i]!, ...(req.body as Partial<User>) };
+      return ok({ user: state.users[i] });
+    },
+    'POST /users/:id/password': () => noContent(),
   };
   return { state, handlers };
 }
@@ -111,7 +137,7 @@ describe('user administration (admin)', () => {
 
     expect(await screen.findByText('Enter the full name')).toBeInTheDocument();
     expect(screen.getByText('Enter a valid email address')).toBeInTheDocument();
-    expect(screen.getByText('Use at least 12 characters')).toBeInTheDocument();
+    expect(screen.getByText('Use at least 8 characters')).toBeInTheDocument();
     expect(screen.getByText('Choose a manager')).toBeInTheDocument();
     expect(api.calls('POST /users')).toHaveLength(0);
   });
@@ -132,5 +158,121 @@ describe('user administration (admin)', () => {
 
     expect(await screen.findByText('A user with this email already exists')).toBeInTheDocument();
     expect(screen.getByRole('form', { name: 'New user' })).toBeInTheDocument();
+  });
+});
+
+describe('user management (admin)', () => {
+  const rowOf = async (email: string) => (await screen.findByText(email)).closest('tr')!;
+
+  it('offers no actions for admin accounts', async () => {
+    await open();
+
+    const row = await rowOf('admin@example.com');
+    expect(within(row).queryByRole('button')).not.toBeInTheDocument();
+  });
+
+  it('edits a contributor: sends only what changed and refreshes the list', async () => {
+    const api = await open();
+    const user = userEvent.setup();
+
+    await user.click(await screen.findByRole('button', { name: 'Edit dev@example.com' }));
+    const form = within(screen.getByRole('form', { name: 'Edit dev@example.com' }));
+    await user.clear(form.getByLabelText('Full name'));
+    await user.type(form.getByLabelText('Full name'), 'Casey Renamed');
+    await user.click(form.getByRole('button', { name: 'Save changes' }));
+
+    expect(await screen.findByText('Casey Renamed')).toBeInTheDocument();
+    expect(api.calls('PATCH /users/:id')[0]!.body).toEqual({ name: 'Casey Renamed' });
+  });
+
+  it('promotes to manager without sending a manager', async () => {
+    const api = await open();
+    const user = userEvent.setup();
+
+    await user.click(await screen.findByRole('button', { name: 'Edit dev@example.com' }));
+    const form = within(screen.getByRole('form', { name: 'Edit dev@example.com' }));
+    await user.selectOptions(form.getByLabelText('Role'), 'MANAGER');
+    expect(form.queryByLabelText('Manager')).not.toBeInTheDocument();
+    await user.click(form.getByRole('button', { name: 'Save changes' }));
+
+    await screen.findByRole('button', { name: 'Edit dev@example.com' });
+    expect(api.calls('PATCH /users/:id')[0]!.body).toEqual({ role: 'MANAGER' });
+  });
+
+  it('shows the server reason when an edit is refused and keeps the form open', async () => {
+    await open(userBackend(), {
+      'PATCH /users/:id': fail(
+        422,
+        'BUSINESS_RULE_VIOLATION',
+        'This manager still has 2 active direct report(s).',
+      ),
+    });
+    const user = userEvent.setup();
+
+    await user.click(await screen.findByRole('button', { name: 'Edit manager@example.com' }));
+    const form = within(screen.getByRole('form', { name: 'Edit manager@example.com' }));
+    await user.selectOptions(form.getByLabelText('Role'), 'CONTRIBUTOR');
+    await user.selectOptions(form.getByLabelText('Manager'), 'u-mgr2');
+    await user.click(form.getByRole('button', { name: 'Save changes' }));
+
+    expect(await screen.findByText(/still has 2 active direct report/)).toBeInTheDocument();
+    expect(screen.getByRole('form', { name: 'Edit manager@example.com' })).toBeInTheDocument();
+  });
+
+  it('deactivates and reactivates a user', async () => {
+    const api = await open();
+    const user = userEvent.setup();
+
+    await user.click(await screen.findByRole('button', { name: 'Deactivate dev@example.com' }));
+    expect(
+      await screen.findByRole('button', { name: 'Reactivate dev@example.com' }),
+    ).toBeInTheDocument();
+    expect(api.calls('PATCH /users/:id')[0]!.body).toEqual({ isActive: false });
+    expect(within(await rowOf('dev@example.com')).getByText('Inactive')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Reactivate dev@example.com' }));
+    expect(
+      await screen.findByRole('button', { name: 'Deactivate dev@example.com' }),
+    ).toBeInTheDocument();
+    expect(api.calls('PATCH /users/:id')[1]!.body).toEqual({ isActive: true });
+  });
+
+  it('shows why a deactivation was refused', async () => {
+    await open(userBackend(), {
+      'PATCH /users/:id': fail(422, 'BUSINESS_RULE_VIOLATION', 'Reassign the reports first.'),
+    });
+    const user = userEvent.setup();
+
+    await user.click(await screen.findByRole('button', { name: 'Deactivate manager@example.com' }));
+
+    expect(await screen.findByText('Reassign the reports first.')).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Deactivate manager@example.com' }),
+    ).toBeInTheDocument();
+  });
+
+  it('resets a password, validating the length first', async () => {
+    const api = await open();
+    const user = userEvent.setup();
+
+    await user.click(
+      await screen.findByRole('button', { name: 'Reset password for dev@example.com' }),
+    );
+    const form = () =>
+      within(screen.getByRole('form', { name: 'Reset password for dev@example.com' }));
+    await user.type(form().getByLabelText('New password'), 'short');
+    await user.click(form().getByRole('button', { name: 'Set password' }));
+    expect(await screen.findByText('Use at least 8 characters')).toBeInTheDocument();
+    expect(api.calls('POST /users/:id/password')).toHaveLength(0);
+
+    await user.clear(form().getByLabelText('New password'));
+    await user.type(form().getByLabelText('New password'), 'A-Much-Longer-Pass-1');
+    await user.click(form().getByRole('button', { name: 'Set password' }));
+
+    await screen.findByRole('button', { name: 'Reset password for dev@example.com' });
+    expect(api.calls('POST /users/:id/password')[0]!.body).toEqual({
+      password: 'A-Much-Longer-Pass-1',
+    });
+    expect(screen.queryByRole('form', { name: /Reset password/ })).not.toBeInTheDocument();
   });
 });

@@ -1,12 +1,24 @@
 import { useCallback, useState } from 'react';
 import type { User } from '../../api/types';
-import { createUser, listUsers, type NewUserInput } from '../../api/users';
+import {
+  createUser,
+  listUsers,
+  resetUserPassword,
+  updateUser,
+  type NewUserInput,
+  type UserPatch,
+} from '../../api/users';
 import { AsyncView } from '../../components/ui/AsyncView';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
+import { Alert } from '../../components/ui/Alert';
 import { EmptyState } from '../../components/ui/EmptyState';
+import { describeError } from '../../components/ui/describeError';
+import { useMutation } from '../../hooks/useMutation';
 import { useAsync } from '../../hooks/useAsync';
 import styles from '../projects/Projects.module.css';
+import { EditUserForm } from './EditUserForm';
+import { ResetPasswordForm } from './ResetPasswordForm';
 import { UserForm } from './UserForm';
 
 const ROLE_LABEL = { CONTRIBUTOR: 'Contributor', MANAGER: 'Manager', ADMIN: 'Admin' } as const;
@@ -62,23 +74,20 @@ export function UsersPage() {
                     <th>Role</th>
                     <th>Manager</th>
                     <th>Status</th>
+                    <th>
+                      <span className="visually-hidden">Actions</span>
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
                   {list.map((u) => (
-                    <tr key={u.id}>
-                      <td>{u.name}</td>
-                      <td>{u.email}</td>
-                      <td>{ROLE_LABEL[u.role]}</td>
-                      <td>{u.managerId ? (nameOf.get(u.managerId) ?? '—') : '—'}</td>
-                      <td>
-                        {u.isActive === false ? (
-                          <Badge tone="neutral">Inactive</Badge>
-                        ) : (
-                          <Badge tone="success">Active</Badge>
-                        )}
-                      </td>
-                    </tr>
+                    <UserRows
+                      key={u.id}
+                      user={u}
+                      managerName={u.managerId ? (nameOf.get(u.managerId) ?? '—') : '—'}
+                      managers={managersFrom(list)}
+                      onChanged={reload}
+                    />
                   ))}
                 </tbody>
               </table>
@@ -92,3 +101,96 @@ export function UsersPage() {
 
 const managersFrom = (list: User[]) =>
   list.filter((u) => u.role === 'MANAGER' && u.isActive !== false);
+
+function UserRows({
+  user,
+  managerName,
+  managers,
+  onChanged,
+}: {
+  user: User;
+  managerName: string;
+  managers: User[];
+  onChanged: () => void;
+}) {
+  const [panel, setPanel] = useState<'edit' | 'password' | null>(null);
+  const toggle = useMutation(async () => {
+    await updateUser(user.id, { isActive: user.isActive === false });
+    onChanged();
+  });
+  const isAdmin = user.role === 'ADMIN';
+  const close = () => setPanel(null);
+
+  const save = async (patch: UserPatch) => {
+    await updateUser(user.id, patch);
+    onChanged();
+  };
+  const setPassword = async (password: string) => {
+    await resetUserPassword(user.id, password);
+  };
+
+  return (
+    <>
+      <tr>
+        <td>{user.name}</td>
+        <td>{user.email}</td>
+        <td>{ROLE_LABEL[user.role]}</td>
+        <td>{managerName}</td>
+        <td>
+          {user.isActive === false ? (
+            <Badge tone="neutral">Inactive</Badge>
+          ) : (
+            <Badge tone="success">Active</Badge>
+          )}
+        </td>
+        <td>
+          {/* Admin accounts are not editable through the API; no buttons that could only fail. */}
+          {!isAdmin && (
+            <div className="row">
+              <Button
+                variant="secondary"
+                onClick={() => setPanel('edit')}
+                aria-label={`Edit ${user.email}`}
+              >
+                Edit
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={() => setPanel('password')}
+                aria-label={`Reset password for ${user.email}`}
+              >
+                Reset password
+              </Button>
+              <Button
+                variant="secondary"
+                disabled={toggle.running}
+                onClick={() => void toggle.run()}
+                aria-label={`${user.isActive === false ? 'Reactivate' : 'Deactivate'} ${user.email}`}
+              >
+                {user.isActive === false ? 'Reactivate' : 'Deactivate'}
+              </Button>
+            </div>
+          )}
+        </td>
+      </tr>
+      {toggle.error && (
+        <tr>
+          <td colSpan={6}>
+            <Alert variant="error">{describeError(toggle.error)}</Alert>
+          </td>
+        </tr>
+      )}
+      {panel && (
+        <tr>
+          <td colSpan={6}>
+            {panel === 'edit' ? (
+              <EditUserForm user={user} managers={managers} onSave={save} onCancel={close} />
+            ) : (
+              <ResetPasswordForm user={user} onSave={setPassword} onCancel={close} />
+            )}
+          </td>
+        </tr>
+      )}
+    </>
+  );
+}

@@ -176,12 +176,12 @@ describe('role-aware navigation (a convenience; the backend enforces access)', (
     [
       'contributor',
       users.contributor,
-      ['Home', 'Timesheet', 'Projects', 'Reports', 'System status'],
+      ['Home', 'Timesheet', 'Projects', 'Reports', 'Account', 'System status'],
     ],
     [
       'manager',
       users.manager,
-      ['Home', 'Timesheet', 'Approvals', 'Projects', 'Reports', 'System status'],
+      ['Home', 'Timesheet', 'Approvals', 'Projects', 'Reports', 'Account', 'System status'],
     ],
     [
       'admin',
@@ -194,6 +194,7 @@ describe('role-aware navigation (a convenience; the backend enforces access)', (
         'Budgets',
         'Users',
         'Locked periods',
+        'Account',
         'System status',
       ],
     ],
