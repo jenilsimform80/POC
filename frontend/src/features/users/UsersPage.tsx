@@ -11,6 +11,7 @@ import {
 import { AsyncView } from '../../components/ui/AsyncView';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
+import { ActionMenu } from '../../components/ui/ActionMenu';
 import { Alert } from '../../components/ui/Alert';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { describeError } from '../../components/ui/describeError';
@@ -144,32 +145,21 @@ function UserRows({
           )}
         </td>
         <td>
-          {/* Admin accounts are not editable through the API; no buttons that could only fail. */}
+          {/* Admin accounts are not editable through the API; no actions that could only fail. */}
           {!isAdmin && (
-            <div className="row">
-              <Button
-                variant="secondary"
-                onClick={() => setPanel('edit')}
-                aria-label={`Edit ${user.email}`}
-              >
-                Edit
-              </Button>
-              <Button
-                variant="secondary"
-                onClick={() => setPanel('password')}
-                aria-label={`Reset password for ${user.email}`}
-              >
-                Reset password
-              </Button>
-              <Button
-                variant="secondary"
-                disabled={toggle.running}
-                onClick={() => void toggle.run()}
-                aria-label={`${user.isActive === false ? 'Reactivate' : 'Deactivate'} ${user.email}`}
-              >
-                {user.isActive === false ? 'Reactivate' : 'Deactivate'}
-              </Button>
-            </div>
+            <ActionMenu
+              label={`Actions for ${user.email}`}
+              disabled={toggle.running}
+              items={[
+                { label: 'Edit', onSelect: () => setPanel('edit') },
+                { label: 'Reset password', onSelect: () => setPanel('password') },
+                {
+                  label: user.isActive === false ? 'Reactivate' : 'Deactivate',
+                  onSelect: () => void toggle.run(),
+                  ...(user.isActive !== false && { tone: 'danger' as const }),
+                },
+              ]}
+            />
           )}
         </td>
       </tr>
