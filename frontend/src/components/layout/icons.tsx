@@ -65,3 +65,10 @@ export const PulseIcon = () => (
     <path d="M3 12h4l3-8 4 16 3-8h4" />
   </Icon>
 );
+export const UsersIcon = () => (
+  <Icon>
+    <circle cx="9" cy="8" r="3.2" />
+    <path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6" />
+    <path d="M16 5.2a3.2 3.2 0 010 5.6M18 14.4c1.8.9 3 2.8 3 5.6" />
+  </Icon>
+);

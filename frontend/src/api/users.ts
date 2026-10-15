@@ -1,6 +1,20 @@
 import { apiRequest } from './client';
 import type { User } from './types';
 
+export interface NewUserInput {
+  email: string;
+  name: string;
+  role: 'CONTRIBUTOR' | 'MANAGER';
+  password: string;
+  managerId?: string;
+}
+
+/** Admin only (the backend enforces it). */
+export async function createUser(input: NewUserInput): Promise<User> {
+  const { user } = await apiRequest<{ user: User }>('/users', { method: 'POST', body: input });
+  return user;
+}
+
 /** Users the caller may see: self (contributor), self + reports (manager), everyone (admin). */
 export async function listUsers(signal?: AbortSignal): Promise<User[]> {
   const { users } = await apiRequest<{ users: User[] }>('/users', { ...(signal && { signal }) });

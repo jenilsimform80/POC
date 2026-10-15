@@ -9,6 +9,7 @@ import { ProjectsPage } from '../features/projects/ProjectsPage';
 import { BudgetReportPage } from '../features/reports/BudgetReportPage';
 import { ReportsPage } from '../features/reports/ReportsPage';
 import { ReviewPage } from '../features/approvals/ReviewPage';
+import { UsersPage } from '../features/users/UsersPage';
 import { TimesheetPage } from '../features/timesheet/TimesheetPage';
 import { HomePage } from '../pages/HomePage';
 import { LoginPage } from '../pages/LoginPage';
@@ -43,6 +44,10 @@ export const routes: RouteObject[] = [
           {
             element: <RequireRole area="periods" />,
             children: [{ path: 'periods', element: <PeriodsPage /> }],
+          },
+          {
+            element: <RequireRole area="users" />,
+            children: [{ path: 'users', element: <UsersPage /> }],
           },
           {
             element: <RequireRole area="approvals" />,

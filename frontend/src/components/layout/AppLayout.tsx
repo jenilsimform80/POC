@@ -15,6 +15,7 @@ import {
   HomeIcon,
   LockIcon,
   PulseIcon,
+  UsersIcon,
   WalletIcon,
 } from './icons';
 
@@ -33,6 +34,7 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/projects', label: 'Projects', icon: <FolderIcon />, area: 'projects' },
   { to: '/reports', label: 'Reports', icon: <ChartIcon />, area: 'reports', end: true },
   { to: '/reports/budgets', label: 'Budgets', icon: <WalletIcon />, area: 'budgets' },
+  { to: '/users', label: 'Users', icon: <UsersIcon />, area: 'users' },
   { to: '/periods', label: 'Locked periods', icon: <LockIcon />, area: 'periods' },
 ];
 
