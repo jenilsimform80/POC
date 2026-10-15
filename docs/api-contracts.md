@@ -67,7 +67,7 @@ All routes require a session (401 otherwise). Scope by role:
 Body (strict, unknown fields → 400): `{ email, name, role, password, managerId? }`
 - `email`: trimmed, lower-cased, valid, ≤ 254. `name`: 1–120. `password`: 8–128 characters (stored as an argon2id hash, never returned).
 - `role`: `CONTRIBUTOR` or `MANAGER` only (admins cannot be created through the API).
-- `managerId`: **required** for `CONTRIBUTOR`, **forbidden** for `MANAGER` (400 `VALIDATION_ERROR` otherwise).
+- `managerId`: **required** for `CONTRIBUTOR` (400 `VALIDATION_ERROR` otherwise), optional for `MANAGER` (a manager may report to another active manager, who then approves their timesheet; a top-level manager has none and cannot submit).
 
 201 `{ "user": { id, email, name, role, managerId, isActive } }`.
 Errors: 400 `VALIDATION_ERROR`; 409 `CONFLICT` (email already exists, case-insensitive); 422 `BUSINESS_RULE_VIOLATION` (`managerId` is not an active user with role MANAGER).
@@ -76,7 +76,7 @@ Errors: 400 `VALIDATION_ERROR`; 409 `CONFLICT` (email already exists, case-insen
 **ADMIN only.** Body (strict; at least one field): `{ name?, role?, managerId?, isActive? }`; `role` is `CONTRIBUTOR` or `MANAGER`; `managerId` is a UUID or `null`. Email cannot be changed.
 200 `{ "user": {…} }`. Errors: 400 `VALIDATION_ERROR`; 404 `NOT_FOUND`; 422 `BUSINESS_RULE_VIOLATION` when:
 - the target is an **ADMIN** (admin accounts are not editable through the API, which also prevents locking out the last admin);
-- the result is inconsistent: a contributor without an **active manager** (checked while the account is or becomes active), a manager with a manager, a user as their own manager;
+- the result is inconsistent: a contributor without an **active manager** (checked while the account is or becomes active), a manager reporting loop (A→B→A), a user as their own manager;
 - a manager who still has **active direct reports** would be deactivated or demoted (reassign them first).
 Setting `isActive: false` deletes all of the user's sessions at once. Concurrent user-administration writes are serialized with one advisory lock, so a manager cannot be deactivated while a report is being assigned to them.
 
@@ -116,14 +116,16 @@ All routes require a session (401 otherwise) and send/receive JSON. Dates are `Y
 ## Projects and tasks
 | Endpoint | Who | Notes |
 |----------|-----|-------|
-| `GET /api/projects` | any | active projects with active tasks; `?includeArchived=true` is admin-only (403 otherwise) |
+| `GET /api/projects` | any | active projects with active tasks; restricted projects only for their members and admins; `?includeArchived=true` is admin-only (403 otherwise) |
 | `GET /api/projects/:id` | any | archived projects are 404 for non-admins |
 | `POST /api/projects` | ADMIN | body `{code, name, clientName?, budgetHours, startDate?, endDate?}` → 201 `{project}`; duplicate code 409 |
 | `PATCH /api/projects/:id` | ADMIN | any of the fields plus `isActive` (archive); `clientName/startDate/endDate` may be `null`; ≥1 field |
-| `POST /api/projects/:id/tasks` | ADMIN | `{name}` → 201 `{task}`; duplicate name in project 409 |
-| `PATCH /api/projects/:id/tasks/:taskId` | ADMIN | `{name?, isActive?}`; task must belong to `:id` else 404 |
+| `POST /api/projects/:id/tasks` | ADMIN, MANAGER | `{name, assigneeIds?}` → 201 `{task}`; managers only on projects they can see (404 otherwise) and may assign only themself or active direct reports (422); on a restricted project assignees must be members; duplicate name 409 |
+| `PATCH /api/projects/:id/tasks/:taskId` | ADMIN, MANAGER | `{name?, isActive?, assigneeIds?}`; `assigneeIds` replaces the list (`[]` = open to everyone); managers only for tasks they created (403); task must belong to `:id` else 404 |
 
-Project view: `{id, code, name, clientName, budgetHours, startDate, endDate, isActive, tasks:[{id,name,isActive}]}`.
+Project create/update also accept `isRestricted` and `memberIds` (admin only; `memberIds` replaces the member list and needs a restricted project; members must be active non-admin users, else 422).
+
+Project view: `{id, code, name, clientName, budgetHours*, startDate, endDate, isActive, isRestricted, memberIds*, tasks:[{id,name,isActive,canLog,canManage,assigneeIds*}]}` (`*` = admin only, or only when `canManage`). `canLog` is false when the task is assigned only to others; logging to it returns 422. Logging to a restricted project you are not a member of returns 404.
 
 ## Time entries
 Entry view: `{id, userId, projectId, taskId, workDate, hours, isBillable, notes, createdAt, updatedAt}`. Write responses: `{entry, warnings:[{code, message, total, threshold, date?}]}` with codes `DAILY_HOURS_HIGH`, `WEEKLY_HOURS_HIGH`.

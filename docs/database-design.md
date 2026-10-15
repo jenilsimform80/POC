@@ -6,6 +6,8 @@ Status: Phase 2 — schema designed in [backend/prisma/schema.prisma](../backend
 ```
 users ─┬─< users (manager_id → users.id, "direct reports")
        ├─< time_entries >─ projects ─< tasks     (entry's task must belong to its project)
+       ├─< project_members >─ projects           (only used when projects.is_restricted)
+       ├─< task_assignees >─ tasks               (no rows = open to everyone)
        ├─< weekly_submissions ─< approvals >─ users (manager)
        ├─< locked_periods (locked_by)
        └─< audit_logs (actor)
@@ -14,7 +16,9 @@ users ─┬─< users (manager_id → users.id, "direct reports")
 |-------|---------|-----------------|
 | users | Accounts and roles (`CONTRIBUTOR`, `MANAGER`, `ADMIN` = Admin/Finance) | unique email; `manager_id` self-FK; CHECK `manager_id <> id` |
 | projects | Billable projects with a hour budget | unique `code`; CHECK `budget_hours >= 0`; CHECK `end_date >= start_date` |
-| tasks | Tasks within a project | unique `(project_id, name)`; unique `(id, project_id)` (FK target) |
+| project_members | Who may use a restricted project (`projects.is_restricted`) | PK `(project_id, user_id)`; FK to project is `ON DELETE CASCADE` (membership rows are not financial data) |
+| task_assignees | Who may log time to a task; no rows = everyone who can use the project | PK `(task_id, user_id)`; FK to task is `ON DELETE CASCADE` |
+| tasks | Tasks within a project | unique `(project_id, name)`; unique `(id, project_id)` (FK target); `created_by_id` = manager who created it (null for admin-created) |
 | time_entries | One row per user/project/task/day/hours | composite FK `(task_id, project_id)` → tasks; CHECK `0 < hours <= 24` |
 | weekly_submissions | A user's submission of one week | unique `(user_id, week_start)`; CHECK week_start is a Monday |
 | approvals | Append-only manager decisions on a submission | FK to submission and manager |
@@ -24,7 +28,7 @@ users ─┬─< users (manager_id → users.id, "direct reports")
 
 ## Decisions
 - **Delete behavior:** every foreign key is `ON DELETE RESTRICT`. Financial and audit data is never cascade-deleted. Users, projects and tasks are retired with `is_active = false` instead of being deleted. Time entries may be deleted by the application only while editable and unlocked (rule enforced in Phase 4/5). Audit logs are never deleted (a DB-level append-only guard is evaluated in Phase 5).
-- **Manager model:** `users.manager_id` self-reference; each user has at most one direct manager. "Direct report" checks are `report.manager_id = manager.id`. A reporting-history table was rejected as unnecessary for a POC.
+- **Manager model:** `users.manager_id` self-reference; each user has at most one direct manager. Managers may themselves have a manager (so their timesheet has an approver); the application refuses loops (checked under the user-administration lock). "Direct report" checks are `report.manager_id = manager.id`. A reporting-history table was rejected as unnecessary for a POC.
 - **Lock model (Phase 2 scope):** one global row per calendar month. An entry is locked when a `locked_periods` row exists with `period_start = date_trunc('month', work_date)`. Unlock fields and the DB trigger are Phase 5 (they will be added in a new migration, never by editing this one).
 - **Dates:** `work_date`, `week_start`, `period_start`, project dates are `DATE` (no time zone, no shifting by client or server zone). Event times (`created_at`, `locked_at`, ...) are `timestamptz`. Prisma returns `DATE` as a JS `Date` at UTC midnight; code must use UTC accessors/ISO strings. The reporting timezone policy is decided in Phase 6.
 - **Week definition (assumption):** ISO week, Monday start (enforced by CHECK). Unverified against the original spec; changing it needs a new migration.
@@ -82,7 +86,7 @@ Migration `20261011160000_period_lock_and_audit_guards` (hand-written SQL, no ta
 Inspect in pgAdmin: `SELECT tgname, tgenabled FROM pg_trigger WHERE NOT tgisinternal;` and `SELECT * FROM locked_periods;`.
 
 ## Migration status
-Applied to dev and test: `20261011143343_init_schema`, `20261011144319_add_sessions` (Phase 3) and `20261011160000_period_lock_and_audit_guards` (Phase 5). Each change is a NEW migration; applied ones are never edited. Details of the first:
+Applied to dev and test: `20261011143343_init_schema`, `20261011144319_add_sessions` (Phase 3) and `20261011160000_period_lock_and_audit_guards` (Phase 5). `20261015101015_project_membership_and_task_assignment` (project restriction, task assignment; applied to dev and test; purely additive). Each change is a NEW migration; applied ones are never edited. Details of the first:
 `20261011143343_init_schema` (`backend/prisma/migrations/`) to `timesheets_dev` and `timesheets_test`. It contains the generated DDL plus the hand-written CHECK constraints (6 total; verified by name in `pg_constraint`). Verified by `backend/tests/db/schema.integration.test.ts` (10 tests) against the test database.
 
 Note: Prisma adds `ON UPDATE CASCADE` to foreign keys by default; harmless because primary keys (UUIDs) never change.

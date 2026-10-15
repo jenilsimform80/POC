@@ -38,6 +38,8 @@
 
 - Post-Phase 10 change (ADR 0013, requested by the owner): Swagger UI at `/api-docs` and OpenAPI JSON at `/api-docs.json` (documentation only; off in production by default; new dependency `swagger-ui-express`). Awaiting the owner's review.
 
+- Post-Phase 10 change (ADR 0014, requested by the owner): restricted projects with members, managers create tasks and assign them to themself/direct reports, managers may report to another manager. Not a numbered phase; awaiting the owner's review.
+
 ## Environment findings
 Node v22.18.0, npm 11.5.2, git 2.34.1, Claude Code 2.1.246, PostgreSQL 14.24 (role `timesheets` and databases `timesheets_dev`/`timesheets_test` created by the owner; connectivity verified), Docker not installed.
 
