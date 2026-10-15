@@ -6,7 +6,7 @@ import { AppError } from '../errors/app-error.js';
 import type { PrismaClient } from '../generated/prisma/client.js';
 import { createAuthenticate } from '../middleware/authenticate.js';
 import { validate } from '../middleware/validate.js';
-import { loginSchemas } from '../validation/auth.schemas.js';
+import { changePasswordSchemas, loginSchemas } from '../validation/auth.schemas.js';
 
 export function createAuthRouter(prisma: PrismaClient, env: Env): Router {
   const router = Router();
@@ -39,5 +39,13 @@ export function createAuthRouter(prisma: PrismaClient, env: Env): Router {
   router.post('/login', attemptLimiter, loginLimiter, validate(loginSchemas), controller.postLogin);
   router.post('/logout', controller.postLogout);
   router.get('/me', createAuthenticate(prisma), controller.getMe);
+  // Wrong current passwords count toward the same failed-attempt limit as logins.
+  router.post(
+    '/change-password',
+    createAuthenticate(prisma),
+    loginLimiter,
+    validate(changePasswordSchemas),
+    controller.postChangePassword,
+  );
   return router;
 }

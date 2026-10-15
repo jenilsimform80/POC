@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { MIN_PASSWORD_LENGTH } from './common.js';
 
 export const userIdParamsSchema = z.object({ id: z.uuid() });
 export const getUserSchemas = { params: userIdParamsSchema };
@@ -15,8 +16,8 @@ export const createUserSchemas = {
       email: z.string().trim().toLowerCase().pipe(z.email().max(254)),
       name: z.string().trim().min(1).max(120),
       role: z.enum(CREATABLE_ROLES),
-      // Same minimum as the demo seed; the upper bound stops absurdly large inputs being hashed.
-      password: z.string().min(12).max(128),
+      // The upper bound stops absurdly large inputs being hashed.
+      password: z.string().min(MIN_PASSWORD_LENGTH).max(128),
       managerId: z.uuid().optional(),
     })
     .superRefine((body, ctx) => {
@@ -36,4 +37,23 @@ export const createUserSchemas = {
         });
       }
     }),
+};
+
+const password = z.string().min(MIN_PASSWORD_LENGTH).max(128);
+
+export const updateUserSchemas = {
+  params: userIdParamsSchema,
+  body: z
+    .strictObject({
+      name: z.string().trim().min(1).max(120).optional(),
+      role: z.enum(CREATABLE_ROLES).optional(),
+      managerId: z.uuid().nullable().optional(),
+      isActive: z.boolean().optional(),
+    })
+    .refine((body) => Object.keys(body).length > 0, 'provide at least one field to update'),
+};
+
+export const resetPasswordSchemas = {
+  params: userIdParamsSchema,
+  body: z.strictObject({ password }),
 };

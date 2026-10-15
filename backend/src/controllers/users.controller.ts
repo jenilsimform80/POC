@@ -7,8 +7,13 @@ import {
   listDirectReports,
   listVisibleUsers,
 } from '../services/authorization.service.js';
-import { createUser } from '../services/user.service.js';
-import type { createUserSchemas, getUserSchemas } from '../validation/users.schemas.js';
+import { createUser, resetPassword, updateUser } from '../services/user.service.js';
+import type {
+  createUserSchemas,
+  getUserSchemas,
+  resetPasswordSchemas,
+  updateUserSchemas,
+} from '../validation/users.schemas.js';
 
 export function createUsersController(prisma: PrismaClient) {
   const list: RequestHandler = async (req, res) => {
@@ -29,5 +34,16 @@ export function createUsersController(prisma: PrismaClient) {
     res.status(201).json({ user: await createUser(prisma, body) });
   };
 
-  return { list, directReports, getById, create };
+  const update: RequestHandler = async (_req, res) => {
+    const { params, body } = getValidated<typeof updateUserSchemas>(res);
+    res.status(200).json({ user: await updateUser(prisma, params.id, body) });
+  };
+
+  const setPassword: RequestHandler = async (_req, res) => {
+    const { params, body } = getValidated<typeof resetPasswordSchemas>(res);
+    await resetPassword(prisma, params.id, body.password);
+    res.status(204).end();
+  };
+
+  return { list, directReports, getById, create, update, setPassword };
 }

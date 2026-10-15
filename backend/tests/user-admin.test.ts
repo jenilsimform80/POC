@@ -129,9 +129,16 @@ describe('POST /api/users — rejected input', () => {
   });
 
   it('refuses a short password', async () => {
-    const res = await create('admin', valid({ email: 'short@t.dev', password: 'tooShort1!' }));
+    const res = await create('admin', valid({ email: 'short@t.dev', password: 'short7!' }));
     expect(res.status).toBe(400);
     expect(code(res)).toBe('VALIDATION_ERROR');
+  });
+
+  it('enforces the 8-character password minimum exactly (7 refused, 8 accepted)', async () => {
+    const seven = await create('admin', valid({ email: 'seven@t.dev', password: '1234567' }));
+    expect(seven.status).toBe(400);
+    const eight = await create('admin', valid({ email: 'eight@t.dev', password: '12345678' }));
+    expect(eight.status).toBe(201);
   });
 
   it.each([

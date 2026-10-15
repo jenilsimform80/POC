@@ -4,6 +4,7 @@
  * The password comes from the environment so no credential is committed to the repository.
  */
 import { hashPassword } from '../src/auth/password.js';
+import { MIN_PASSWORD_LENGTH } from '../src/validation/common.js';
 import { loadEnv } from '../src/config/env.js';
 import { createPrismaClient } from '../src/db/prisma.js';
 
@@ -11,8 +12,8 @@ const env = loadEnv();
 if (env.NODE_ENV === 'production') throw new Error('Refusing to seed demo users in production.');
 
 const password = process.env['SEED_PASSWORD'];
-if (!password || password.length < 12) {
-  throw new Error('Set SEED_PASSWORD to a value with at least 12 characters.');
+if (!password || password.length < MIN_PASSWORD_LENGTH) {
+  throw new Error(`Set SEED_PASSWORD to a value with at least ${MIN_PASSWORD_LENGTH} characters.`);
 }
 
 const prisma = createPrismaClient(env.DATABASE_URL);

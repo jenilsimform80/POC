@@ -16,6 +16,9 @@ export const isoDate = z.iso
 
 export const uuid = z.uuid();
 
+/** Minimum length for any password set through the API (the seed script uses the same value). */
+export const MIN_PASSWORD_LENGTH = 8;
+
 /** Query-string booleans arrive as strings. */
 export const queryBoolean = z.enum(['true', 'false']).transform((value) => value === 'true');
 

@@ -5,7 +5,8 @@ import type { PrismaClient } from '../generated/prisma/client.js';
 import { getValidated } from '../middleware/validate.js';
 import { requireAuth } from '../middleware/authorize.js';
 import { login, logout } from '../services/auth.service.js';
-import type { loginSchemas } from '../validation/auth.schemas.js';
+import { changeOwnPassword } from '../services/user.service.js';
+import type { changePasswordSchemas, loginSchemas } from '../validation/auth.schemas.js';
 
 function cookieOptions(env: Env): CookieOptions {
   return {
@@ -40,5 +41,17 @@ export function createAuthController(prisma: PrismaClient, env: Env) {
     res.status(200).json({ user: requireAuth(req) });
   };
 
-  return { postLogin, postLogout, getMe };
+  const postChangePassword: RequestHandler = async (req, res) => {
+    const { body } = getValidated<typeof changePasswordSchemas>(res);
+    const token = (req.cookies as Record<string, unknown> | undefined)?.[SESSION_COOKIE];
+    await changeOwnPassword(
+      prisma,
+      requireAuth(req).id,
+      typeof token === 'string' ? token : undefined,
+      body,
+    );
+    res.status(204).end();
+  };
+
+  return { postLogin, postLogout, getMe, postChangePassword };
 }
