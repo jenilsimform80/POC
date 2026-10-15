@@ -1,15 +1,18 @@
 import { useState, type FormEvent } from 'react';
 import type { ProjectInput, ProjectPatch } from '../../api/projects';
-import type { Project } from '../../api/types';
+import type { Project, User } from '../../api/types';
 import { Alert } from '../../components/ui/Alert';
 import { Button } from '../../components/ui/Button';
-import { TextField } from '../../components/ui/FormControls';
+import { CheckboxField, TextField } from '../../components/ui/FormControls';
 import { describeError } from '../../components/ui/describeError';
 import { useMutation } from '../../hooks/useMutation';
 import { fieldErrorsFrom } from '../../lib/forms';
+import { PersonChecklist } from './PersonChecklist';
 
 interface ProjectFormProps {
   project?: Project;
+  /** Active contributors and managers who can be made members of a restricted project. */
+  people: User[];
   /** Must reject on failure; the form shows why and stays open. */
   onSave: (value: ProjectInput | ProjectPatch) => Promise<unknown>;
   onCancel: () => void;
@@ -17,7 +20,7 @@ interface ProjectFormProps {
 
 type Field = 'code' | 'name' | 'clientName' | 'budgetHours' | 'startDate' | 'endDate';
 
-export function ProjectForm({ project, onSave, onCancel }: ProjectFormProps) {
+export function ProjectForm({ project, people, onSave, onCancel }: ProjectFormProps) {
   const [code, setCode] = useState(project?.code ?? '');
   const [name, setName] = useState(project?.name ?? '');
   const [clientName, setClientName] = useState(project?.clientName ?? '');
@@ -26,6 +29,8 @@ export function ProjectForm({ project, onSave, onCancel }: ProjectFormProps) {
   );
   const [startDate, setStartDate] = useState(project?.startDate ?? '');
   const [endDate, setEndDate] = useState(project?.endDate ?? '');
+  const [isRestricted, setIsRestricted] = useState(project?.isRestricted ?? false);
+  const [memberIds, setMemberIds] = useState<string[]>(project?.memberIds ?? []);
   const [clientErrors, setClientErrors] = useState<Partial<Record<Field, string>>>({});
   const save = useMutation(onSave);
 
@@ -61,6 +66,7 @@ export function ProjectForm({ project, onSave, onCancel }: ProjectFormProps) {
         ...(clientName.trim() && { clientName: clientName.trim() }),
         ...(startDate && { startDate }),
         ...(endDate && { endDate }),
+        ...(isRestricted && { isRestricted, memberIds }),
       };
     } else {
       // Only what changed; optional fields cleared by the user become null.
@@ -72,6 +78,11 @@ export function ProjectForm({ project, onSave, onCancel }: ProjectFormProps) {
       if (budgetHours !== project.budgetHours) patch.budgetHours = budgetHours;
       if (startDate !== (project.startDate ?? '')) patch.startDate = startDate || null;
       if (endDate !== (project.endDate ?? '')) patch.endDate = endDate || null;
+      if (isRestricted !== project.isRestricted) patch.isRestricted = isRestricted;
+      const before = [...(project.memberIds ?? [])].sort().join();
+      if (isRestricted && [...memberIds].sort().join() !== before) patch.memberIds = memberIds;
+      // Opening a project to everyone again clears its member list.
+      if (!isRestricted && project.isRestricted) patch.memberIds = [];
       if (Object.keys(patch).length === 0) {
         onCancel();
         return;
@@ -137,6 +148,19 @@ export function ProjectForm({ project, onSave, onCancel }: ProjectFormProps) {
           onChange={(e) => setEndDate(e.target.value)}
         />
       </div>
+      <CheckboxField
+        label="Restrict to selected people (otherwise every signed-in user can log time here)"
+        checked={isRestricted}
+        onChange={(e) => setIsRestricted(e.target.checked)}
+      />
+      {isRestricted && (
+        <PersonChecklist
+          legend="Members"
+          people={people}
+          selected={memberIds}
+          onChange={setMemberIds}
+        />
+      )}
       <div className="row">
         <Button type="submit" disabled={save.running}>
           {save.running ? 'Saving…' : project ? 'Save project' : 'Create project'}

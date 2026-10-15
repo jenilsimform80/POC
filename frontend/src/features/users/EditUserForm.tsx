@@ -10,7 +10,7 @@ import { fieldErrorsFrom } from '../../lib/forms';
 
 interface EditUserFormProps {
   user: User;
-  /** Active managers a contributor can report to (never the user themself). */
+  /** Active managers this user can report to (never the user themself). */
   managers: User[];
   /** Must reject on failure; the form shows why and stays open. */
   onSave: (patch: UserPatch) => Promise<unknown>;
@@ -40,7 +40,7 @@ export function EditUserForm({ user, managers, onSave, onCancel }: EditUserFormP
     const patch: UserPatch = {};
     if (name.trim() !== user.name) patch.name = name.trim();
     if (role !== user.role) patch.role = role;
-    if (role === 'CONTRIBUTOR' && managerId !== (user.managerId ?? '')) patch.managerId = managerId;
+    if (managerId !== (user.managerId ?? '')) patch.managerId = managerId === '' ? null : managerId;
     if (Object.keys(patch).length === 0) {
       onCancel();
       return;
@@ -75,23 +75,23 @@ export function EditUserForm({ user, managers, onSave, onCancel }: EditUserFormP
           <option value="CONTRIBUTOR">Contributor</option>
           <option value="MANAGER">Manager</option>
         </SelectField>
-        {role === 'CONTRIBUTOR' && (
-          <SelectField
-            label="Manager"
-            value={managerId}
-            error={errors['managerId']}
-            onChange={(e) => setManagerId(e.target.value)}
-          >
-            <option value="">Select a manager…</option>
-            {managers
-              .filter((m) => m.id !== user.id)
-              .map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.name} ({m.email})
-                </option>
-              ))}
-          </SelectField>
-        )}
+        <SelectField
+          label={role === 'MANAGER' ? 'Reports to (optional)' : 'Manager'}
+          value={managerId}
+          error={errors['managerId']}
+          onChange={(e) => setManagerId(e.target.value)}
+        >
+          <option value="">
+            {role === 'MANAGER' ? 'No manager (top level)' : 'Select a manager…'}
+          </option>
+          {managers
+            .filter((m) => m.id !== user.id)
+            .map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.name} ({m.email})
+              </option>
+            ))}
+        </SelectField>
       </div>
       <p className="muted">Email addresses cannot be changed.</p>
       <div className="row">

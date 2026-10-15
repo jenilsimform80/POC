@@ -30,6 +30,7 @@ function projectBackend(initial: Project[], user: User = users.admin) {
       );
   const handlers = {
     ...signedInAs(user),
+    'GET /users': ok({ users: Object.values(users) }),
     'GET /projects': (req: MockRequest) =>
       ok({ projects: visible(req.query.get('includeArchived') === 'true') }),
     'POST /projects': (req: MockRequest) => {
@@ -56,6 +57,8 @@ function projectBackend(initial: Project[], user: User = users.admin) {
         id: `t-new${state.nextId++}`,
         name: (req.body as { name: string }).name,
         isActive: true,
+        canLog: true,
+        canManage: true,
       };
       p.tasks = [...(p.tasks ?? []), task];
       return ok({ task }, 201);
@@ -84,7 +87,7 @@ describe('projects: browsing (every role)', () => {
     ['contributor', users.contributor],
     ['manager', users.manager],
   ])(
-    'shows active projects with budget, client and tasks to a %s — and no admin controls',
+    'shows active projects with budget, client and tasks to a %s — and no project admin controls',
     async (_l, user) => {
       const backend = projectBackend(
         [project({ startDate: '2026-01-01', endDate: '2026-12-31' })],
@@ -99,10 +102,13 @@ describe('projects: browsing (every role)', () => {
       expect(within(alpha).getByText('Build')).toBeInTheDocument();
       expect(screen.queryByRole('button', { name: 'New project' })).not.toBeInTheDocument();
       expect(
-        screen.queryByRole('button', { name: /^Edit project|^Archive|^Restore/ }),
+        screen.queryByRole('button', { name: /^(Edit|Archive|Restore) project/ }),
       ).not.toBeInTheDocument();
-      expect(screen.queryByRole('form', { name: /Add task/ })).not.toBeInTheDocument();
       expect(screen.queryByLabelText('Show archived projects')).not.toBeInTheDocument();
+      // Only managers (and admins) may add tasks.
+      const addTask = screen.queryByRole('form', { name: /Add task/ });
+      if (user.role === 'MANAGER') expect(addTask).toBeInTheDocument();
+      else expect(addTask).not.toBeInTheDocument();
     },
   );
 
@@ -348,5 +354,79 @@ describe('projects: tasks (admin)', () => {
       }),
     );
     await waitFor(() => expect(card('ALPHA').queryByText('Review')).not.toBeInTheDocument());
+  });
+});
+
+describe('projects: restriction and task assignment', () => {
+  it('lets an admin restrict a project to chosen members', async () => {
+    const api = await open(projectBackend([]));
+    await userEvent.click(screen.getByRole('button', { name: 'New project' }));
+    const form = within(screen.getByRole('form', { name: 'New project' }));
+    await userEvent.type(form.getByLabelText('Code'), 'SECRET');
+    await userEvent.type(form.getByLabelText('Name'), 'Secret');
+    await userEvent.type(form.getByLabelText('Budget (hours)'), '10');
+
+    expect(form.queryByRole('group', { name: 'Members' })).not.toBeInTheDocument();
+    await userEvent.click(form.getByLabelText(/Restrict to selected people/));
+    const members = within(form.getByRole('group', { name: 'Members' }));
+    // Admins are never offered: they already see every project.
+    expect(members.queryByLabelText(/Alex Admin/)).not.toBeInTheDocument();
+    await userEvent.click(members.getByLabelText(/Casey Contributor/));
+    await userEvent.click(form.getByRole('button', { name: 'Create project' }));
+
+    await waitFor(() => expect(api.calls('POST /projects')).toHaveLength(1));
+    expect(api.calls('POST /projects')[0]?.body).toMatchObject({
+      isRestricted: true,
+      memberIds: ['u-dev'],
+    });
+    expect(await screen.findByText('Restricted')).toBeInTheDocument();
+  });
+
+  it('lets a manager add a task assigned to a person, and offers only their reachable people', async () => {
+    const api = await open(projectBackend([project()], users.manager));
+    const form = within(await screen.findByRole('form', { name: 'Add task to ALPHA' }));
+
+    await userEvent.type(form.getByLabelText('New task'), 'Fix login');
+    await userEvent.click(form.getByText(/Assign to people/));
+    await userEvent.click(form.getByLabelText(/Casey Contributor/));
+    await userEvent.click(form.getByRole('button', { name: 'Add task' }));
+
+    await waitFor(() => expect(api.calls('POST /projects/:id/tasks')).toHaveLength(1));
+    expect(api.calls('POST /projects/:id/tasks')[0]?.body).toEqual({
+      name: 'Fix login',
+      assigneeIds: ['u-dev'],
+    });
+  });
+
+  it('shows contributors a task assigned to others as such, without edit controls', async () => {
+    const locked = project({
+      tasks: [{ id: 't9', name: 'Secret work', isActive: true, canLog: false, canManage: false }],
+    });
+    await open(projectBackend([locked], users.contributor));
+    const alpha = await screen.findByRole('region', { name: /ALPHA/ });
+    expect(within(alpha).getByText('Assigned to others')).toBeInTheDocument();
+    expect(within(alpha).queryByRole('button', { name: /Assign task/ })).not.toBeInTheDocument();
+  });
+
+  it('only offers a manager edit controls on tasks they manage', async () => {
+    const mixed = project({
+      tasks: [
+        { id: 't1', name: 'Admin task', isActive: true, canLog: true, canManage: false },
+        {
+          id: 't2',
+          name: 'My task',
+          isActive: true,
+          canLog: true,
+          canManage: true,
+          assigneeIds: [],
+        },
+      ],
+    });
+    await open(projectBackend([mixed], users.manager));
+    const alpha = await screen.findByRole('region', { name: /ALPHA/ });
+    expect(within(alpha).queryByRole('button', { name: /Rename task Admin task/ })).toBeNull();
+    expect(
+      within(alpha).getByRole('button', { name: /Assign task My task in ALPHA/ }),
+    ).toBeInTheDocument();
   });
 });

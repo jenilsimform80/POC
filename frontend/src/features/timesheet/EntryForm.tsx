@@ -11,6 +11,7 @@ import {
 } from '../../components/ui/FormControls';
 import { describeError } from '../../components/ui/describeError';
 import { useMutation } from '../../hooks/useMutation';
+import { parseIsoDate } from '../../lib/dates';
 import { fieldErrorsFrom } from '../../lib/forms';
 import styles from './Timesheet.module.css';
 
@@ -28,6 +29,19 @@ interface EntryFormProps {
 }
 
 type Errors = Partial<Record<'projectId' | 'taskId' | 'workDate' | 'hours' | 'notes', string>>;
+
+const longDay = (iso: string) =>
+  parseIsoDate(iso).toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    timeZone: 'UTC',
+  });
+
+function projectWindow(start: string | null | undefined, end: string | null | undefined): string {
+  if (start && end) return `from ${longDay(start)} to ${longDay(end)}`;
+  return start ? `from ${longDay(start)}` : `until ${longDay(end ?? '')}`;
+}
 
 const isQuarterHour = (n: number) => Number.isInteger(n * 4);
 
@@ -52,7 +66,18 @@ export function EntryForm({
   // An entry on a project that has since been archived is not in the active list; keep it
   // selectable so the user can still correct hours/notes without being forced to change project.
   const knownProject = projects.some((p) => p.id === projectId);
-  const tasks = projects.find((p) => p.id === projectId)?.tasks ?? [];
+  // Tasks assigned only to other people are not offered (the backend refuses them anyway).
+  const tasks = (projects.find((p) => p.id === projectId)?.tasks ?? []).filter((t) => t.canLog);
+  const selectedProject = projects.find((p) => p.id === projectId);
+  // ISO dates compare correctly as strings. Same rule the backend enforces on create/date change.
+  const windowProblem = (date: string): string | undefined => {
+    const { startDate, endDate } = selectedProject ?? {};
+    if (!date || (!startDate && !endDate)) return undefined;
+    if ((startDate && date < startDate) || (endDate && date > endDate)) {
+      return `${selectedProject?.code} only accepts time ${projectWindow(startDate, endDate)}. Pick a date in that range, or ask an admin to change the project dates.`;
+    }
+    return undefined;
+  };
   const serverErrors = fieldErrorsFrom(save.error);
   const errors: Errors = { ...serverErrors, ...clientErrors };
   const hasFieldErrors = Object.keys(serverErrors).length > 0;
@@ -63,6 +88,10 @@ export function EntryForm({
     if (!taskId) found.taskId = 'Choose a task';
     if (!workDate || workDate < minDate || workDate > maxDate)
       found.workDate = 'Pick a day in this week';
+    else {
+      const problem = windowProblem(workDate);
+      if (problem) found.workDate = problem;
+    }
     const parsed = Number(hours);
     if (
       hours.trim() === '' ||
@@ -129,6 +158,11 @@ export function EntryForm({
           label="Project"
           value={projectId}
           error={errors.projectId}
+          {...(selectedProject?.startDate || selectedProject?.endDate
+            ? {
+                hint: `Accepts time ${projectWindow(selectedProject.startDate, selectedProject.endDate)}`,
+              }
+            : {})}
           onChange={(e) => {
             setProjectId(e.target.value);
             setTaskId('');

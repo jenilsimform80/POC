@@ -48,3 +48,21 @@
   display: inline-flex;
   gap: 0.5rem;
 }
+.checklist {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md, 0.5rem);
+  padding: 0.5rem 0.75rem;
+  margin: 0;
+  max-height: 14rem;
+  overflow: auto;
+}
+.checklist legend {
+  padding: 0 0.25rem;
+  color: var(--color-text-muted);
+}
+.assignees {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+}

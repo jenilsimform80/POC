@@ -8,7 +8,8 @@ import {
   type ProjectInput,
   type ProjectPatch,
 } from '../../api/projects';
-import type { Project } from '../../api/types';
+import { listUsers } from '../../api/users';
+import type { Project, User } from '../../api/types';
 import { Alert } from '../../components/ui/Alert';
 import { AsyncView } from '../../components/ui/AsyncView';
 import { Badge } from '../../components/ui/Badge';
@@ -26,7 +27,9 @@ import { TaskList } from './TaskList';
 
 export function ProjectsPage() {
   const { state: auth } = useAuth();
-  const isAdmin = auth.status === 'authenticated' && auth.user.role === 'ADMIN';
+  const role = auth.status === 'authenticated' ? auth.user.role : undefined;
+  const isAdmin = role === 'ADMIN';
+  const canAddTasks = role === 'ADMIN' || role === 'MANAGER';
   const [includeArchived, setIncludeArchived] = useState(false);
   const [creating, setCreating] = useState(false);
   const load = useCallback(
@@ -34,6 +37,15 @@ export function ProjectsPage() {
     [includeArchived],
   );
   const { state, reload } = useAsync(load);
+  // Who can be a member or assignee: admins see everyone; a manager sees self + direct reports.
+  const loadPeople = useCallback(
+    (signal: AbortSignal) => (canAddTasks ? listUsers(signal) : Promise.resolve<User[]>([])),
+    [canAddTasks],
+  );
+  const { state: peopleState } = useAsync(loadPeople);
+  const people = (peopleState.status === 'success' ? peopleState.data : []).filter(
+    (u) => u.role !== 'ADMIN' && u.isActive !== false,
+  );
 
   const create = async (value: ProjectInput | ProjectPatch) => {
     await createProject(value as ProjectInput);
@@ -59,7 +71,7 @@ export function ProjectsPage() {
       {creating && isAdmin && (
         <section className={styles.card} aria-label="Create project">
           <h2>New project</h2>
-          <ProjectForm onSave={create} onCancel={() => setCreating(false)} />
+          <ProjectForm people={people} onSave={create} onCancel={() => setCreating(false)} />
         </section>
       )}
 
@@ -87,6 +99,8 @@ export function ProjectsPage() {
                 key={project.id}
                 project={project}
                 isAdmin={isAdmin}
+                canAddTasks={canAddTasks}
+                people={people}
                 onChanged={reload}
               />
             ))}
@@ -100,10 +114,14 @@ export function ProjectsPage() {
 function ProjectCard({
   project,
   isAdmin,
+  canAddTasks,
+  people,
   onChanged,
 }: {
   project: Project;
   isAdmin: boolean;
+  canAddTasks: boolean;
+  people: User[];
   onChanged: () => void;
 }) {
   const [editing, setEditing] = useState(false);
@@ -125,10 +143,16 @@ function ProjectCard({
           {project.code} · {project.name}
         </h2>
         {!project.isActive && <Badge tone="neutral">Archived</Badge>}
+        {project.isRestricted && <Badge tone="neutral">Restricted</Badge>}
       </header>
 
       {editing && isAdmin ? (
-        <ProjectForm project={project} onSave={save} onCancel={() => setEditing(false)} />
+        <ProjectForm
+          project={project}
+          people={people}
+          onSave={save}
+          onCancel={() => setEditing(false)}
+        />
       ) : (
         <>
           <dl className={styles.facts}>
@@ -186,12 +210,21 @@ function ProjectCard({
       <TaskList
         projectCode={project.code}
         tasks={project.tasks ?? []}
-        {...(isAdmin && {
-          onAdd: async (name: string) => {
-            await createTask(project.id, name);
+        // On a restricted project only members can be assigned (the backend enforces it too).
+        people={
+          project.isRestricted && project.memberIds
+            ? people.filter((p) => project.memberIds?.includes(p.id))
+            : people
+        }
+        {...(canAddTasks && {
+          onAdd: async (name: string, assigneeIds: string[]) => {
+            await createTask(project.id, name, assigneeIds);
             onChanged();
           },
-          onUpdate: async (taskId: string, patch: { name?: string; isActive?: boolean }) => {
+          onUpdate: async (
+            taskId: string,
+            patch: { name?: string; isActive?: boolean; assigneeIds?: string[] },
+          ) => {
             await updateTask(project.id, taskId, patch);
             onChanged();
           },

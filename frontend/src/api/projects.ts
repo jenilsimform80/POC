@@ -18,6 +18,8 @@ export interface ProjectInput {
   budgetHours: number;
   startDate?: string;
   endDate?: string;
+  isRestricted?: boolean;
+  memberIds?: string[];
 }
 
 export interface ProjectPatch {
@@ -28,6 +30,8 @@ export interface ProjectPatch {
   startDate?: string | null;
   endDate?: string | null;
   isActive?: boolean;
+  isRestricted?: boolean;
+  memberIds?: string[];
 }
 
 export async function createProject(input: ProjectInput): Promise<Project> {
@@ -46,10 +50,14 @@ export async function updateProject(id: string, patch: ProjectPatch): Promise<Pr
   return project;
 }
 
-export async function createTask(projectId: string, name: string): Promise<Task> {
+export async function createTask(
+  projectId: string,
+  name: string,
+  assigneeIds?: string[],
+): Promise<Task> {
   const { task } = await apiRequest<{ task: Task }>(`/projects/${projectId}/tasks`, {
     method: 'POST',
-    body: { name },
+    body: { name, ...(assigneeIds && assigneeIds.length > 0 && { assigneeIds }) },
   });
   return task;
 }
@@ -57,7 +65,7 @@ export async function createTask(projectId: string, name: string): Promise<Task>
 export async function updateTask(
   projectId: string,
   taskId: string,
-  patch: { name?: string; isActive?: boolean },
+  patch: { name?: string; isActive?: boolean; assigneeIds?: string[] },
 ): Promise<Task> {
   const { task } = await apiRequest<{ task: Task }>(`/projects/${projectId}/tasks/${taskId}`, {
     method: 'PATCH',

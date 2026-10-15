@@ -16,6 +16,12 @@ export interface Task {
   id: string;
   name: string;
   isActive: boolean;
+  /** false when the task is assigned only to other people. */
+  canLog: boolean;
+  /** true for admins and for the manager who created the task. */
+  canManage: boolean;
+  /** Only present when `canManage`; empty means open to everyone. */
+  assigneeIds?: string[];
 }
 
 export interface Project {
@@ -28,6 +34,10 @@ export interface Project {
   startDate: string | null;
   endDate: string | null;
   isActive: boolean;
+  /** true = only members (and admins) can see it and log time to it. */
+  isRestricted: boolean;
+  /** Admin-only. */
+  memberIds?: string[];
   tasks?: Task[];
 }
 

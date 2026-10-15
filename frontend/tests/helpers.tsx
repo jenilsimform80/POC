@@ -149,9 +149,10 @@ export const project = (overrides: Partial<Project> = {}): Project => ({
   startDate: null,
   endDate: null,
   isActive: true,
+  isRestricted: false,
   tasks: [
-    { id: 't1', name: 'Build', isActive: true },
-    { id: 't2', name: 'Review', isActive: true },
+    { id: 't1', name: 'Build', isActive: true, canLog: true, canManage: true },
+    { id: 't2', name: 'Review', isActive: true, canLog: true, canManage: true },
   ],
   ...overrides,
 });

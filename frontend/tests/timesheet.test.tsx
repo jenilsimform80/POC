@@ -24,7 +24,7 @@ const projects = [
     id: 'p2',
     code: 'BETA',
     name: 'Beta Portal',
-    tasks: [{ id: 't3', name: 'Support', isActive: true }],
+    tasks: [{ id: 't3', name: 'Support', isActive: true, canLog: true, canManage: true }],
   }),
 ];
 
@@ -303,6 +303,20 @@ describe('timesheet: adding entries', () => {
     expect(form.getByText('Choose a project')).toBeInTheDocument();
     expect(form.getByText('Choose a task')).toBeInTheDocument();
     expect(form.getByText(/Enter hours in steps of 0.25/)).toBeInTheDocument();
+    expect(api.calls('POST /time-entries')).toHaveLength(0);
+  });
+
+  it('explains a project’s date window up front and refuses an earlier date on the client', async () => {
+    const backend = fakeBackend();
+    const late = project({ id: 'p3', code: 'LATE', name: 'Late Start', startDate: '2026-03-04' });
+    const { api } = await open(backend, { 'GET /projects': ok({ projects: [late] }) });
+    await userEvent.click(screen.getByRole('button', { name: 'Add entry on Mon 2 Mar' }));
+    const form = await fill('2026-03-02', 'p3', 't1', '2');
+
+    expect(form.getByText('Accepts time from 4 Mar 2026')).toBeInTheDocument();
+    await userEvent.click(form.getByRole('button', { name: 'Add entry' }));
+
+    expect(form.getByText(/LATE only accepts time from 4 Mar 2026/)).toBeInTheDocument();
     expect(api.calls('POST /time-entries')).toHaveLength(0);
   });
 

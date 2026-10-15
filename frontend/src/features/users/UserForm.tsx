@@ -9,7 +9,7 @@ import { useMutation } from '../../hooks/useMutation';
 import { fieldErrorsFrom, MIN_PASSWORD_LENGTH } from '../../lib/forms';
 
 interface UserFormProps {
-  /** Active managers a contributor can report to. */
+  /** Active managers a new user can report to. */
   managers: User[];
   /** Must reject on failure; the form shows why and stays open. */
   onSave: (value: NewUserInput) => Promise<unknown>;
@@ -51,7 +51,7 @@ export function UserForm({ managers, onSave, onCancel }: UserFormProps) {
       email: email.trim(),
       role,
       password,
-      ...(role === 'CONTRIBUTOR' && { managerId }),
+      ...(managerId !== '' && { managerId }),
     });
     if (result.ok) onCancel();
   };
@@ -85,27 +85,28 @@ export function UserForm({ managers, onSave, onCancel }: UserFormProps) {
           error={errors.role}
           onChange={(e) => {
             setRole(e.target.value as NewUserInput['role']);
-            setManagerId('');
           }}
         >
           <option value="CONTRIBUTOR">Contributor</option>
           <option value="MANAGER">Manager</option>
         </SelectField>
-        {role === 'CONTRIBUTOR' && (
-          <SelectField
-            label="Manager"
-            value={managerId}
-            error={errors.managerId}
-            onChange={(e) => setManagerId(e.target.value)}
-          >
-            <option value="">Select a manager…</option>
-            {managers.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.name} ({m.email})
-              </option>
-            ))}
-          </SelectField>
-        )}
+        <SelectField
+          label={role === 'MANAGER' ? 'Reports to (optional)' : 'Manager'}
+          value={managerId}
+          error={errors.managerId}
+          onChange={(e) => setManagerId(e.target.value)}
+        >
+          <option value="">
+            {role === 'MANAGER' ? 'No manager (top level)' : 'Select a manager…'}
+          </option>
+          {managers.map((m) => (
+            <option key={m.id} value={m.id}>
+              {m.name} ({m.email})
+            </option>
+          ))}
+        </SelectField>
+      </div>
+      <div className="row">
         <TextField
           label="Initial password"
           type="password"
