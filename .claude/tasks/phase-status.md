@@ -40,6 +40,8 @@
 
 - Post-Phase 10 change (ADR 0014, requested by the owner): restricted projects with members, managers create tasks and assign them to themself/direct reports, managers may report to another manager. Not a numbered phase; awaiting the owner's review.
 
+- Post-Phase 10 change (owner request, no backlog id): show/hide (eye) toggle on the login password field via a reusable `PasswordField` in `FormControls`; Playwright `getByLabel('Password')` calls made exact because the toggle's label also contains "password". Applied to the login, new-user, reset-password and account (change password) forms; each toggle is named after its field ("Show new password"). Awaiting the owner's review.
+
 ## Environment findings
 Node v22.18.0, npm 11.5.2, git 2.34.1, Claude Code 2.1.246, PostgreSQL 14.24 (role `timesheets` and databases `timesheets_dev`/`timesheets_test` created by the owner; connectivity verified), Docker not installed.
 
