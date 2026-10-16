@@ -68,4 +68,19 @@ describe('account: change password', () => {
     expect(screen.getByRole('heading', { name: 'Account' })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Sign in' })).not.toBeInTheDocument();
   });
+
+  it('reveals each of the three password fields independently', async () => {
+    mockApi(signedInAs(users.contributor));
+    renderRoutes('/account');
+    await screen.findByRole('heading', { name: 'Account' });
+    const user = userEvent.setup();
+
+    await user.click(screen.getByRole('button', { name: 'Show new password' }));
+
+    expect(screen.getByLabelText('New password')).toHaveAttribute('type', 'text');
+    expect(screen.getByLabelText('Current password')).toHaveAttribute('type', 'password');
+    expect(screen.getByLabelText('Confirm new password')).toHaveAttribute('type', 'password');
+    expect(screen.getByRole('button', { name: 'Show current password' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Show confirm new password' })).toBeInTheDocument();
+  });
 });

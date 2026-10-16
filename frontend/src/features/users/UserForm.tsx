@@ -3,7 +3,7 @@ import type { NewUserInput } from '../../api/users';
 import type { User } from '../../api/types';
 import { Alert } from '../../components/ui/Alert';
 import { Button } from '../../components/ui/Button';
-import { SelectField, TextField } from '../../components/ui/FormControls';
+import { PasswordField, SelectField, TextField } from '../../components/ui/FormControls';
 import { describeError } from '../../components/ui/describeError';
 import { useMutation } from '../../hooks/useMutation';
 import { fieldErrorsFrom, MIN_PASSWORD_LENGTH } from '../../lib/forms';
@@ -107,9 +107,8 @@ export function UserForm({ managers, onSave, onCancel }: UserFormProps) {
         </SelectField>
       </div>
       <div className="row">
-        <TextField
+        <PasswordField
           label="Initial password"
-          type="password"
           value={password}
           error={errors.password}
           hint={`At least ${MIN_PASSWORD_LENGTH} characters. Share it with the user securely.`}

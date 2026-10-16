@@ -6,6 +6,7 @@ import { AsyncView } from '../src/components/ui/AsyncView';
 import { Button } from '../src/components/ui/Button';
 import { EmptyState } from '../src/components/ui/EmptyState';
 import { ErrorState } from '../src/components/ui/ErrorState';
+import { PasswordField } from '../src/components/ui/FormControls';
 import { LoadingState } from '../src/components/ui/LoadingState';
 import type { AsyncState } from '../src/hooks/useAsync';
 
@@ -153,5 +154,75 @@ describe('AsyncView (loading / error / empty / success)', () => {
     );
 
     expect(screen.getByText('Nothing here yet')).toBeInTheDocument();
+  });
+});
+
+describe('PasswordField', () => {
+  const input = () => screen.getByLabelText('Password');
+
+  it('starts hidden and offers a named, unpressed toggle', () => {
+    render(<PasswordField label="Password" />);
+
+    expect(input()).toHaveAttribute('type', 'password');
+    const toggle = screen.getByRole('button', { name: 'Show password' });
+    expect(toggle).toHaveAttribute('type', 'button'); // never submits the form
+  });
+
+  it('shows the typed text when toggled and hides it again, keeping the value', async () => {
+    render(<PasswordField label="Password" />);
+    await userEvent.type(input(), 'S3cret-pass');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Show password' }));
+    expect(input()).toHaveAttribute('type', 'text');
+    expect(input()).toHaveValue('S3cret-pass');
+    expect(screen.getByRole('button', { name: 'Hide password' })).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Hide password' }));
+    expect(input()).toHaveAttribute('type', 'password');
+    expect(input()).toHaveValue('S3cret-pass');
+  });
+
+  it('can be toggled from the keyboard and does not submit the surrounding form', async () => {
+    const onSubmit = vi.fn((e: { preventDefault: () => void }) => e.preventDefault());
+    render(
+      <form onSubmit={onSubmit}>
+        <PasswordField label="Password" />
+      </form>,
+    );
+
+    screen.getByRole('button', { name: 'Show password' }).focus();
+    await userEvent.keyboard('{Enter}');
+
+    expect(input()).toHaveAttribute('type', 'text');
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it('still shows validation errors and passes input props through', () => {
+    render(
+      <PasswordField
+        label="Password"
+        error="Enter your password"
+        autoComplete="current-password"
+      />,
+    );
+
+    expect(input()).toHaveAttribute('aria-invalid', 'true');
+    expect(input()).toHaveAttribute('autocomplete', 'current-password');
+    expect(screen.getByRole('alert')).toHaveTextContent('Enter your password');
+  });
+
+  it('names each toggle after its own field so several can share a page', async () => {
+    render(
+      <>
+        <PasswordField label="Current password" />
+        <PasswordField label="New password" />
+      </>,
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: 'Show new password' }));
+
+    expect(screen.getByLabelText('New password')).toHaveAttribute('type', 'text');
+    expect(screen.getByLabelText('Current password')).toHaveAttribute('type', 'password');
+    expect(screen.getByRole('button', { name: 'Show current password' })).toBeInTheDocument();
   });
 });

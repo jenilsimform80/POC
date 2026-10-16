@@ -23,3 +23,34 @@
   gap: 0.5rem;
   flex-wrap: wrap;
 }
+
+.passwordWrap {
+  position: relative;
+  display: flex;
+}
+.passwordWrap input {
+  flex: 1;
+  min-width: 0;
+  padding-right: 2.75rem; /* room for the eye button */
+}
+.reveal {
+  position: absolute;
+  top: 50%;
+  right: 0.35rem;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+.reveal:hover {
+  color: var(--color-text);
+  background: var(--color-surface-alt);
+}

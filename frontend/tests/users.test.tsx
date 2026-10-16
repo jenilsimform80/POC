@@ -108,6 +108,21 @@ describe('user administration (admin)', () => {
     expect(screen.queryByRole('form', { name: 'New user' })).not.toBeInTheDocument();
   });
 
+  it('can reveal the initial password while typing it', async () => {
+    await open();
+    const user = userEvent.setup();
+
+    await user.click(await screen.findByRole('button', { name: 'New user' }));
+    const field = form().getByLabelText('Initial password');
+    await user.type(field, 'Long-Enough-Pass-1');
+    expect(field).toHaveAttribute('type', 'password');
+
+    await user.click(form().getByRole('button', { name: 'Show initial password' }));
+
+    expect(field).toHaveAttribute('type', 'text');
+    expect(field).toHaveValue('Long-Enough-Pass-1');
+  });
+
   it('creates a manager without asking for a manager', async () => {
     const api = await open();
     const user = userEvent.setup();
@@ -279,6 +294,18 @@ describe('user management (admin)', () => {
 
     expect(await screen.findByText('Reassign the reports first.')).toBeInTheDocument();
     expect(await itemsOf(user, 'manager@example.com')).toContain('Deactivate');
+  });
+
+  it('can reveal the new password in the reset form', async () => {
+    await open();
+    const user = userEvent.setup();
+
+    await choose(user, 'dev@example.com', 'Reset password');
+    const reset = within(screen.getByRole('form', { name: 'Reset password for dev@example.com' }));
+    await user.type(reset.getByLabelText('New password'), 'A-Much-Longer-Pass-1');
+    await user.click(reset.getByRole('button', { name: 'Show new password' }));
+
+    expect(reset.getByLabelText('New password')).toHaveAttribute('type', 'text');
   });
 
   it('resets a password, validating the length first', async () => {

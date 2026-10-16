@@ -66,6 +66,32 @@ describe('session bootstrap and route guards', () => {
 });
 
 describe('login', () => {
+  it('lets the user reveal and re-hide the password, and signs in with what was typed', async () => {
+    const api = mockApi({ 'POST /auth/login': ok({ user: users.contributor }) });
+    renderRoutes('/login');
+    await screen.findByRole('heading', { name: 'Sign in' });
+    const password = screen.getByLabelText('Password');
+
+    await userEvent.type(screen.getByLabelText('Email'), 'dev@example.com');
+    await userEvent.type(password, 'S3cret-pass');
+    expect(password).toHaveAttribute('type', 'password'); // hidden by default
+
+    await userEvent.click(screen.getByRole('button', { name: 'Show password' }));
+    expect(password).toHaveAttribute('type', 'text');
+    expect(password).toHaveValue('S3cret-pass');
+    expect(api.calls('POST /auth/login')).toHaveLength(0); // the eye button did not submit
+
+    await userEvent.click(screen.getByRole('button', { name: 'Hide password' }));
+    expect(password).toHaveAttribute('type', 'password');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+    await screen.findByRole('heading', { name: /Welcome, Casey Contributor/ });
+    expect(api.calls('POST /auth/login')[0]!.body).toEqual({
+      email: 'dev@example.com',
+      password: 'S3cret-pass',
+    });
+  });
+
   it('signs in, sends the credentials once, and lands on the home page', async () => {
     const api = mockApi({ 'POST /auth/login': ok({ user: users.contributor }) });
     renderRoutes('/login');
@@ -219,6 +245,49 @@ describe('sign out and expired sessions', () => {
     expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeInTheDocument();
     expect(api.calls('POST /auth/logout')).toHaveLength(1);
     expect(screen.queryByText('Casey Contributor')).not.toBeInTheDocument();
+  });
+
+  it('after Sign out, the next sign-in starts at the dashboard, not the page the last user was on', async () => {
+    // Admin is on /users, signs out; a contributor (who cannot open /users) then signs in.
+    let current: typeof users.admin | typeof users.contributor | null = users.admin;
+    mockApi({
+      'GET /auth/me': () =>
+        current ? ok({ user: current }) : fail(401, 'UNAUTHENTICATED', 'Authentication required'),
+      'GET /users': ok({ users: [users.admin] }),
+      'POST /auth/logout': () => {
+        current = null;
+        return noContent();
+      },
+      'POST /auth/login': () => {
+        current = users.contributor;
+        return ok({ user: current });
+      },
+    });
+    const { router } = renderRoutes('/users');
+    await screen.findByRole('heading', { name: 'Users' });
+
+    await userEvent.click(screen.getByRole('button', { name: 'Sign out' }));
+    await screen.findByRole('heading', { name: 'Sign in' });
+    expect(router.state.location.state).toBeNull(); // nothing remembered after an explicit sign-out
+
+    await userEvent.type(screen.getByLabelText('Email'), 'dev@example.com');
+    await userEvent.type(screen.getByLabelText('Password'), 'Some-Password-1');
+    await userEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+
+    expect(
+      await screen.findByRole('heading', { name: /Welcome, Casey Contributor/ }),
+    ).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe('/');
+    expect(screen.queryByText("You don't have access to this page")).not.toBeInTheDocument();
+  });
+
+  it('still returns to the requested page when a signed-out visitor opens a deep link', async () => {
+    mockApi(); // /auth/me -> 401: a fresh visit or an expired session, not a Sign out
+
+    const { router } = renderRoutes('/projects?includeArchived=true');
+
+    await screen.findByRole('heading', { name: 'Sign in' });
+    expect(router.state.location.state).toEqual({ from: '/projects?includeArchived=true' });
   });
 
   it('stays signed in and says so when the server could not end the session', async () => {

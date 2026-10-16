@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { changePassword } from '../../api/auth';
 import { Alert } from '../../components/ui/Alert';
 import { Button } from '../../components/ui/Button';
-import { TextField } from '../../components/ui/FormControls';
+import { PasswordField } from '../../components/ui/FormControls';
 import { describeError } from '../../components/ui/describeError';
 import { useCurrentUser } from '../../auth/useAuth';
 import { useMutation } from '../../hooks/useMutation';
@@ -59,26 +59,23 @@ export function AccountPage() {
           {save.error && Object.keys(fieldErrorsFrom(save.error)).length === 0 && (
             <Alert variant="error">{describeError(save.error)}</Alert>
           )}
-          <TextField
+          <PasswordField
             label="Current password"
-            type="password"
             autoComplete="current-password"
             value={current}
             error={errors['currentPassword']}
             onChange={(e) => setCurrent(e.target.value)}
           />
-          <TextField
+          <PasswordField
             label="New password"
-            type="password"
             autoComplete="new-password"
             value={next}
             error={errors['newPassword']}
             hint={`At least ${MIN_PASSWORD_LENGTH} characters.`}
             onChange={(e) => setNext(e.target.value)}
           />
-          <TextField
+          <PasswordField
             label="Confirm new password"
-            type="password"
             autoComplete="new-password"
             value={confirm}
             error={errors['confirm']}

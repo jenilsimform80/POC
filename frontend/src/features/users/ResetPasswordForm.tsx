@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react';
 import type { User } from '../../api/types';
 import { Alert } from '../../components/ui/Alert';
 import { Button } from '../../components/ui/Button';
-import { TextField } from '../../components/ui/FormControls';
+import { PasswordField } from '../../components/ui/FormControls';
 import { describeError } from '../../components/ui/describeError';
 import { useMutation } from '../../hooks/useMutation';
 import { fieldErrorsFrom, MIN_PASSWORD_LENGTH } from '../../lib/forms';
@@ -40,9 +40,8 @@ export function ResetPasswordForm({ user, onSave, onCancel }: ResetPasswordFormP
       {save.error && Object.keys(serverErrors).length === 0 && (
         <Alert variant="error">{describeError(save.error)}</Alert>
       )}
-      <TextField
+      <PasswordField
         label="New password"
-        type="password"
         autoComplete="new-password"
         value={password}
         error={clientError ?? serverErrors['password']}

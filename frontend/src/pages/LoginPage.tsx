@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { Navigate, useLocation } from 'react-router';
 import { Alert } from '../components/ui/Alert';
 import { Button } from '../components/ui/Button';
-import { TextField } from '../components/ui/FormControls';
+import { PasswordField, TextField } from '../components/ui/FormControls';
 import { describeError } from '../components/ui/describeError';
 import { useAuth } from '../auth/useAuth';
 import { useMutation } from '../hooks/useMutation';
@@ -66,9 +66,8 @@ export function LoginPage() {
                 (touched && missing.email ? 'Enter your email' : undefined) ?? serverFields['email']
               }
             />
-            <TextField
+            <PasswordField
               label="Password"
-              type="password"
               autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}

@@ -5,7 +5,10 @@ import { deferStart } from '../lib/defer-start';
 import type { User } from '../api/types';
 
 export type AuthState =
-  { status: 'loading' } | { status: 'anonymous' } | { status: 'authenticated'; user: User };
+  | { status: 'loading' }
+  /** `signedOut`: the user pressed Sign out (as opposed to an expired session or a fresh visit). */
+  | { status: 'anonymous'; signedOut?: true }
+  | { status: 'authenticated'; user: User };
 
 export interface AuthContextValue {
   state: AuthState;
@@ -61,7 +64,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Only forget the user once the server has ended the session. If the request fails the
     // session may still be valid, so we must not pretend the user is signed out (shared computers).
     await logoutRequest();
-    setState({ status: 'anonymous' });
+    // Marked so the route guard does not remember the page they were on: whoever signs in next
+    // (possibly someone with a different role) starts at the dashboard.
+    setState({ status: 'anonymous', signedOut: true });
   }, []);
 
   const value = useMemo(() => ({ state, login, logout }), [state, login, logout]);
