@@ -40,26 +40,24 @@ users ─┬─< users (manager_id → users.id, "direct reports")
 - **CHECK constraints** are hand-added SQL in the migration because Prisma cannot declare them.
 
 ## Local database setup (you run this once)
-Create a dedicated, non-superuser role and two databases (dev and isolated test). `CREATEDB` is required because `prisma migrate dev` creates a temporary shadow database.
+Create a dedicated, non-superuser role and one database. Tests and e2e use a derived sibling `<name>_test`, created automatically by `npm run db:setup:test`. `CREATEDB` is required because `prisma migrate dev` creates a temporary shadow database.
 ```bash
 sudo -u postgres psql <<'SQL'
 CREATE ROLE timesheets WITH LOGIN PASSWORD 'choose-a-password' CREATEDB;
 CREATE DATABASE timesheets_dev  OWNER timesheets;
-CREATE DATABASE timesheets_test OWNER timesheets;
 SQL
 ```
 Put the URLs in the git-ignored `backend/.env` (see `.env.example`):
 ```
 DATABASE_URL=postgresql://timesheets:<password>@localhost:5432/timesheets_dev?schema=public
-TEST_DATABASE_URL=postgresql://timesheets:<password>@localhost:5432/timesheets_test?schema=public
 ```
-URL-encode special characters in the password. Tests refuse to run unless the database name ends with `_test`.
+URL-encode special characters in the password. Tests and e2e run against `timesheets_dev_test` (derived from `DATABASE_URL`) and refuse any database not ending in `_test`.
 
 ## Commands
 | Command | Purpose |
 |---------|---------|
 | `npm run db:migrate` | Create/apply a dev migration (`prisma migrate dev`) |
-| `npm run db:migrate:test` | Apply committed migrations to the test database (`prisma migrate deploy`) |
+| `npm run db:setup:test` | Create the derived `_test` database if missing and apply migrations (runs before `npm test`) |
 | `npm run db:generate` | Regenerate the Prisma client (also runs on `npm install`) |
 | `npm run db:studio` | Prisma Studio (optional) |
 
@@ -87,6 +85,6 @@ Inspect in pgAdmin: `SELECT tgname, tgenabled FROM pg_trigger WHERE NOT tgisinte
 
 ## Migration status
 Applied to dev and test: `20261011143343_init_schema`, `20261011144319_add_sessions` (Phase 3) and `20261011160000_period_lock_and_audit_guards` (Phase 5). `20261015101015_project_membership_and_task_assignment` (project restriction, task assignment; applied to dev and test; purely additive). Each change is a NEW migration; applied ones are never edited. Details of the first:
-`20261011143343_init_schema` (`backend/prisma/migrations/`) to `timesheets_dev` and `timesheets_test`. It contains the generated DDL plus the hand-written CHECK constraints (6 total; verified by name in `pg_constraint`). Verified by `backend/tests/db/schema.integration.test.ts` (10 tests) against the test database.
+`20261011143343_init_schema` (`backend/prisma/migrations/`) to `timesheets_dev`. It contains the generated DDL plus the hand-written CHECK constraints (6 total; verified by name in `pg_constraint`). Verified by `backend/tests/db/schema.integration.test.ts` (10 tests) against the database.
 
 Note: Prisma adds `ON UPDATE CASCADE` to foreign keys by default; harmless because primary keys (UUIDs) never change.

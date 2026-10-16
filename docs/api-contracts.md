@@ -35,7 +35,7 @@ Swagger UI: `GET /api-docs`; OpenAPI 3.0 JSON: `GET /api-docs.json` (outside `/a
 - Added in Phase 2 (`backend/tests/health.test.ts`).
 
 ## Authentication (Phase 3)
-Cookie `sid` (HttpOnly, SameSite=Lax, Secure in production) identifies the session. Browsers must send credentials (`fetch(..., { credentials: 'include' })`). State-changing requests from a browser `Origin` that is not in `CORS_ORIGIN` get 403.
+Cookie `sid` (HttpOnly, SameSite=Lax, Secure in production) identifies the session. Browsers must send credentials (`fetch(..., { credentials: 'include' })`). State-changing requests from a browser `Origin` that is not in `FRONTEND_URL` get 403.
 
 ### POST /api/auth/change-password
 Auth: session. Body `{ currentPassword, newPassword (8–128) }`. 204; the user's **other** sessions are deleted, the current one stays. 401 `UNAUTHENTICATED` (wrong current password — counts toward the failed-login rate limit), 422 (new equals current), 400 validation.

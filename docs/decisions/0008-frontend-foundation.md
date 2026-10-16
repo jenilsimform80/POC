@@ -16,5 +16,5 @@ Status: Accepted (Phase 7).
 
 ## Known limitations
 - No authentication UI, no 401 handling yet (Phase 8 adds login and a central "session expired" reaction to a 401).
-- Opening the dev app at `http://127.0.0.1:5173` instead of `http://localhost:5173` makes state-changing requests fail with 403: the backend's `CORS_ORIGIN` default allows only `http://localhost:5173` (verified).
+- Opening the dev app at `http://127.0.0.1:5173` instead of `http://localhost:5173` makes state-changing requests fail with 403: the backend's `FRONTEND_URL` default allows only `http://localhost:5173` (verified).
 - No end-to-end browser test yet (Phase 9). Connectivity was verified by running the real backend and Vite and exercising the proxy with HTTP requests, plus unit/integration tests with a stubbed `fetch`.

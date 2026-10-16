@@ -30,7 +30,7 @@ Prerequisites: Docker Engine with the Compose plugin (v2), ~2 GB disk.
    | `DB_NAME` | database name (default `timesheets`) |
    | `DB_OWNER_PASSWORD` | role that owns the schema; used **only** by the one-shot `migrate` service |
    | `DB_APP_PASSWORD` | role the running backend uses: `SELECT/INSERT/UPDATE/DELETE` only |
-   | `PUBLIC_ORIGIN` | the exact URL users open (default `http://localhost:8080`); becomes the backend `CORS_ORIGIN` |
+   | `PUBLIC_ORIGIN` | the exact URL users open (default `http://localhost:8080`); becomes the backend `FRONTEND_URL` |
    | `WEB_PORT` | host port for the web container (default 8080) |
    | `SESSION_TTL_HOURS` | absolute session lifetime (default 8) |
    | `SEED_PASSWORD` | only for demo data (below) |
@@ -69,15 +69,13 @@ Prerequisites: Node.js ≥ 22.12, npm, PostgreSQL 14+ (a local server you can cr
    ```sql
    CREATE ROLE timesheets WITH LOGIN PASSWORD '<choose>' CREATEDB;
    CREATE DATABASE timesheets_dev  OWNER timesheets;
-   CREATE DATABASE timesheets_test OWNER timesheets;   -- used ONLY by automated tests; they empty it
    ```
 2. **Backend**
    ```bash
    cd backend
-   cp .env.example .env     # set DATABASE_URL and TEST_DATABASE_URL (replace CHANGE_ME); NODE_ENV=development stays
+   cp .env.example .env     # set DATABASE_URL (replace CHANGE_ME); NODE_ENV=development stays
    npm ci
-   npx prisma migrate deploy        # apply the committed migrations to the dev database
-   npm run db:migrate:test          # ...and to the test database
+   npx prisma migrate deploy        # apply the committed migrations to the database
    SEED_PASSWORD='<8+ chars>' npm run db:seed                 # demo users (dev only)
    npm run dev                                                 # API on :3000
    ```
@@ -93,10 +91,10 @@ Prisma migrations in `backend/prisma/migrations/` are the single source of schem
 ## Test commands
 | What | Command | Needs |
 |------|---------|-------|
-| Backend: type-check, lint, format, 285 tests | `cd backend && npm run check` | `TEST_DATABASE_URL` (a `*_test` database) |
+| Backend: type-check, lint, format, 285 tests | `cd backend && npm run check` | `DATABASE_URL` (tests use the derived `_test` database) |
 | Frontend: type-check, lint, format, 186 tests | `cd frontend && npm run check` | nothing external |
-| End-to-end (30 browser tests) | `cd frontend && npm run e2e` | Google Chrome, free ports 3000/5173, `TEST_DATABASE_URL` |
-| End-to-end against a running (e.g. production-like) stack | `E2E_EXTERNAL_SERVERS=1 E2E_BASE_URL=… E2E_COOKIE_NAME=__Host-sid E2E_EXPECT_CSP=1 npm run e2e` | the stack + the same `*_test` database |
+| End-to-end (30 browser tests) | `cd frontend && npm run e2e` | Google Chrome, free ports 3000/5173, `DATABASE_URL` (uses the derived `_test` database) |
+| End-to-end against a running (e.g. production-like) stack | `E2E_EXTERNAL_SERVERS=1 E2E_BASE_URL=… E2E_COOKIE_NAME=__Host-sid E2E_EXPECT_CSP=1 npm run e2e` | the stack + the derived `_test` database |
 | Live API contract check | `cd frontend && LIVE_PASSWORD=… npm run test:live` | a running backend on a disposable DB |
 | Scripted walkthrough | `BASE_URL=… DEMO_PASSWORD=… scripts/walkthrough.sh` | a running stack with demo users |
 
@@ -104,4 +102,4 @@ Prisma migrations in `backend/prisma/migrations/` are the single source of schem
 Nothing secret is committed: `.env` files are git-ignored, `.env.example` files contain placeholders, the seed password comes from the environment, and e2e passwords are random per run. Rotate by changing `.env` and recreating the containers (database role passwords: see the init-script note above).
 
 ## Production checklist
-See `docs/security.md` (Phase 9) - TLS and HSTS, same origin, exact `CORS_ORIGIN`, `TRUST_PROXY`, SPA headers (provided by `frontend/nginx/`), proxy-level rate limiting, session cleanup job, backups.
+See `docs/security.md` (Phase 9) - TLS and HSTS, same origin, exact `FRONTEND_URL`, `TRUST_PROXY`, SPA headers (provided by `frontend/nginx/`), proxy-level rate limiting, session cleanup job, backups.

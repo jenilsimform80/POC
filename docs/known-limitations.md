@@ -25,7 +25,7 @@ Honest list as of the end of Phase 9. Nothing here is hidden behind a passing te
 - No background cleanup of expired sessions; absolute (not sliding) session expiry; no "sign out everywhere".
 - Requests without an `Origin` header are accepted (not a browser CSRF vector).
 - Source maps are emitted in production builds (POC).
-- **Production must configure** (see `docs/security.md`): `NODE_ENV=production`, TLS + HSTS at the proxy, SPA and `/api` on one origin, exact `CORS_ORIGIN`, `TRUST_PROXY`, SPA response headers (CSP, nosniff, referrer policy) because the backend's helmet does not cover static files, no public `.map` files, a real environment instead of `--env-file=.env` in containers.
+- **Production must configure** (see `docs/security.md`): `NODE_ENV=production`, TLS + HSTS at the proxy, SPA and `/api` on one origin, exact `FRONTEND_URL`, `TRUST_PROXY`, SPA response headers (CSP, nosniff, referrer policy) because the backend's helmet does not cover static files, no public `.map` files, a real environment instead of `--env-file=.env` in containers.
 
 ## 5. Performance
 - Whole-table reports (admin, full range; lifetime budget) are O(rows): ≈ 0.5 s at 600 k entries (synthetic, one machine). No new index was justified by `EXPLAIN` (ADR 0007).

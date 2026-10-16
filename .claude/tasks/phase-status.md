@@ -47,7 +47,7 @@ Node v22.18.0, npm 11.5.2, git 2.34.1, Claude Code 2.1.246, PostgreSQL 14.24 (ro
 - Original spec not provided (POC-DOC-001). Phase 4–6 rule values are assumptions.
 - npm intermittently drops Vitest's native binding from the lockfile when dependencies change; fix is deleting `node_modules` and `package-lock.json` and running `npm install`.
 - Docker missing — needed by Phase 10.
-- Dev gotcha: open the frontend at `http://localhost:5173`, not `127.0.0.1` (backend `CORS_ORIGIN` allow-list; otherwise POST/PATCH/DELETE get 403).
+- Dev gotcha: open the frontend at `http://localhost:5173`, not `127.0.0.1` (backend `FRONTEND_URL` allow-list; otherwise POST/PATCH/DELETE get 403).
 - The table-owner role can disable the lock trigger (verified); production needs separate owner and app roles (ADR 0005).
 - Project skills `security-review` and `code-review` share names with built-in skills; if the wrong one triggers, rename to `poc-` prefixed names.
 - Open decisions are listed in `docs/requirements.md` and `docs/architecture.md`.
