@@ -8,7 +8,7 @@ const external = process.env['E2E_EXTERNAL_SERVERS'] === '1';
 
 /**
  * End-to-end tests: a REAL browser (system Google Chrome) against the REAL frontend (Vite) and the
- * REAL backend, on a disposable `*_test` database that global-setup empties and seeds each run.
+ * REAL backend, on the configured database, which global-setup empties and seeds each run.
  * Run: `npm run e2e` (needs Google Chrome; or run `npx playwright install chromium` and change
  * `channel` to remove it).
  */
@@ -24,7 +24,7 @@ export default defineConfig({
   use: {
     // 127.0.0.1, not localhost: Playwright's API request client adds a fixed ~5 s delay to EVERY request
     // to `localhost` (measured: 5.1 s vs 4 ms), which made the suite crawl. The e2e backend therefore
-    // allows both origins (CORS_ORIGIN below); real users should still open http://localhost:5173.
+    // allows both origins (FRONTEND_URL below); real users should still open http://localhost:5173.
     baseURL: process.env['E2E_BASE_URL'] ?? 'http://127.0.0.1:5173',
     channel: 'chrome',
     screenshot: 'only-on-failure',
@@ -43,7 +43,7 @@ export default defineConfig({
             DATABASE_URL: databaseUrl,
             NODE_ENV: 'development', // plain-HTTP localhost: the Secure/__Host- cookie is for production
             PORT: '3000',
-            CORS_ORIGIN: 'http://localhost:5173,http://127.0.0.1:5173',
+            FRONTEND_URL: 'http://localhost:5173,http://127.0.0.1:5173',
             LOGIN_RATE_LIMIT_MAX: '200', // the suite signs in many times from one IP
             LOGIN_ATTEMPT_LIMIT_MAX: '2000',
           },

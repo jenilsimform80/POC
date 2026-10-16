@@ -4,16 +4,20 @@ import path from 'node:path';
 export const backendDir = path.resolve(process.cwd(), '../backend');
 
 /**
- * The DISPOSABLE database the end-to-end suite may reset and fill. Taken from E2E_DATABASE_URL, or
- * the backend's TEST_DATABASE_URL. It must be a *_test database: the suite wipes it.
+ * The database the end-to-end suite resets and fills. Never the development database: it is the
+ * DATABASE_URL from backend/.env with `_test` appended to the database name (the same rule as
+ * backend/src/db/test-database.ts), or E2E_DATABASE_URL. It must end in `_test`: the suite wipes it.
  */
 export function testDatabaseUrl(): string {
   let url = process.env['E2E_DATABASE_URL'];
   if (!url) {
     const text = readFileSync(path.join(backendDir, '.env'), 'utf8');
-    url = /^TEST_DATABASE_URL=(.+)$/m.exec(text)?.[1]?.trim();
+    const dev = /^DATABASE_URL=(.+)$/m.exec(text)?.[1]?.trim();
+    if (!dev) throw new Error('Set E2E_DATABASE_URL or DATABASE_URL in backend/.env');
+    const derived = new URL(dev);
+    if (!derived.pathname.slice(1).endsWith('_test')) derived.pathname += '_test';
+    url = derived.toString();
   }
-  if (!url) throw new Error('Set E2E_DATABASE_URL or TEST_DATABASE_URL in backend/.env');
   const dbName = new URL(url).pathname.slice(1);
   if (!dbName.endsWith('_test')) {
     throw new Error(

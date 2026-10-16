@@ -13,6 +13,12 @@ export default function globalSetup(): void {
     SEED_PASSWORD: password,
     NODE_ENV: 'development',
   };
+  // Run with the plain environment (dev DATABASE_URL from backend/.env): it creates the *_test sibling.
+  execFileSync('npm', ['run', '-s', 'db:setup:test'], {
+    cwd: backendDir,
+    env: process.env,
+    stdio: 'inherit',
+  });
   execFileSync('npm', ['run', '-s', 'db:reset:test'], { cwd: backendDir, env, stdio: 'inherit' });
   execFileSync('npm', ['run', '-s', 'db:seed'], { cwd: backendDir, env, stdio: 'inherit' });
 }

@@ -48,7 +48,7 @@ The browser calls the backend directly at `VITE_API_URL` (see `.env.example`); `
 
 | Name           | Default | Purpose                                                                                                                                                      |
 | -------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `VITE_API_URL` | `/api`  | Base URL the browser uses for API calls, e.g. `http://localhost:3000/api`. The backend `CORS_ORIGIN` must list this app's origin. Leave unset behind nginx. |
+| `VITE_API_URL` | `/api`  | Base URL the browser uses for API calls, e.g. `http://localhost:3000/api`. The backend `FRONTEND_URL` must list this app's origin. Leave unset behind nginx. |
 
 Only `VITE_*` variables are exposed to browser code; never put secrets in them.
 
@@ -95,15 +95,15 @@ tests-live/     opt-in contract check against a real backend (see below)
 
 ## End-to-end tests
 
-`npm run e2e` runs 29 Playwright tests in real Google Chrome. Playwright starts the backend and Vite itself; before each run `e2e/global-setup.ts` empties the disposable database (`backend` `npm run db:reset:test`, which **refuses any database whose name does not end in `_test`**) and seeds the demo users with a random password. It uses `TEST_DATABASE_URL` from `backend/.env` (or `E2E_DATABASE_URL`) and needs ports 3000 and 5173 free. Specs: `workflow` (login → project → hours → submit → reject → resubmit → approve → report/budget), `locking` (UI plus direct API calls), `security` and `timezone-and-reports` (the same data viewed from four time zones). Without system Chrome run `npx playwright install chromium` and remove `channel: 'chrome'` from `playwright.config.ts`. The config uses `127.0.0.1` because Playwright's request client is ≈5 s slower per request on `localhost`; for normal use open `http://localhost:5173`.
+`npm run e2e` runs 29 Playwright tests in real Google Chrome. Playwright starts the backend and Vite itself; before each run `e2e/global-setup.ts` creates/migrates the derived `<name>_test` database (`npm run db:setup:test`), empties it (`npm run db:reset:test`, which **refuses any database whose name does not end in `_test`**) and seeds the demo users with a random password. It derives that name from `DATABASE_URL` in `backend/.env` (or `E2E_DATABASE_URL`) and needs ports 3000 and 5173 free. Specs: `workflow` (login → project → hours → submit → reject → resubmit → approve → report/budget), `locking` (UI plus direct API calls), `security` and `timezone-and-reports` (the same data viewed from four time zones). Without system Chrome run `npx playwright install chromium` and remove `channel: 'chrome'` from `playwright.config.ts`. The config uses `127.0.0.1` because Playwright's request client is ≈5 s slower per request on `localhost`; for normal use open `http://localhost:5173`.
 
 ## Live contract check (optional)
 
-`npm test` stubs `fetch`. To verify the wrappers and response shapes against the real API, run the backend against a **disposable** database (e.g. the backend's `TEST_DATABASE_URL`), seed the demo users, and run:
+`npm test` stubs `fetch`. To verify the wrappers and response shapes against the real API, run the backend against a database you can afford to fill, seed the demo users, and run:
 
 ```bash
-cd backend && DATABASE_URL="$TEST_DATABASE_URL" SEED_PASSWORD='choose-8+-chars' npm run db:seed
-cd backend && DATABASE_URL="$TEST_DATABASE_URL" npm run dev        # API on :3000
+cd backend && SEED_PASSWORD='choose-8+-chars' npm run db:seed
+cd backend && npm run dev        # API on :3000
 cd frontend && LIVE_PASSWORD='choose-8+-chars' npm run test:live
 ```
 
