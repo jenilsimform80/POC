@@ -7,11 +7,7 @@ try {
   // no .env file - rely on the process environment
 }
 
-// `DB_TARGET=test` points migrate commands at the isolated test database.
-const databaseUrl =
-  process.env['DB_TARGET'] === 'test'
-    ? process.env['TEST_DATABASE_URL']
-    : process.env['DATABASE_URL'];
+const databaseUrl = process.env['DATABASE_URL'];
 
 export default defineConfig({
   schema: 'prisma/schema.prisma',

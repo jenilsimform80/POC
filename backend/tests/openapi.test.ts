@@ -189,7 +189,6 @@ describe('documentation endpoints', () => {
       expect(text).not.toContain(secret);
     }
     expect(text).not.toContain(process.env['DATABASE_URL'] ?? '\u0000');
-    expect(text).not.toContain(process.env['TEST_DATABASE_URL'] ?? '\u0000');
   });
 });
 

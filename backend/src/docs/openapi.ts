@@ -107,7 +107,7 @@ export function buildOpenApiDocument(options: OpenApiOptions): Json {
         '',
         '**Authentication.** Cookie session. Call `POST /auth/login`; the server sets an HttpOnly cookie and your browser sends it on later calls. Swagger UI cannot set a `Cookie` header itself, so the *Authorize* button is informational — just log in with *Try it out*.',
         '',
-        "**Trying write calls from this page.** State-changing requests from a browser must come from an allow-listed origin (`CORS_ORIGIN`). Add this page's own origin (e.g. `http://localhost:3000`) to `CORS_ORIGIN` in `backend/.env`, restart, then log in here.",
+        "**Trying write calls from this page.** State-changing requests from a browser must come from an allow-listed origin (`FRONTEND_URL`). Add this page's own origin (e.g. `http://localhost:3000`) to `FRONTEND_URL` in `backend/.env`, restart, then log in here.",
         '',
         '**Errors.** Every error is `{ "error": { "code", "message", "details"? } }`. Any endpoint can also return 413/415 (oversized or unsupported body), 500 (generic, no internals) or 503 (transient database condition; safe to retry).',
         '',

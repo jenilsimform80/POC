@@ -1,4 +1,4 @@
-// Vitest does not read .env; load it so integration tests can find TEST_DATABASE_URL.
+// Vitest does not read .env; load it so integration tests can derive their test database from DATABASE_URL.
 try {
   process.loadEnvFile('.env');
 } catch {

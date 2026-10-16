@@ -26,11 +26,11 @@ export function createApp(env: Env, deps: AppDependencies): Express {
   if (env.TRUST_PROXY > 0) app.set('trust proxy', env.TRUST_PROXY);
   app.locals['sessionCookieName'] = sessionCookieName(env.NODE_ENV);
   app.use(helmet());
-  app.use(cors({ origin: env.CORS_ORIGIN, credentials: true }));
+  app.use(cors({ origin: env.FRONTEND_URL, credentials: true }));
   app.use(express.json({ limit: '100kb' }));
   app.use(rejectNulBytes);
   app.use(cookieParser());
-  app.use(createOriginCheck(env.CORS_ORIGIN));
+  app.use(createOriginCheck(env.FRONTEND_URL));
 
   mountApiDocs(app, env);
   app.use('/api', createApiRouter(deps, env));

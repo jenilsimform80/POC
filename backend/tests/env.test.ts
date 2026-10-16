@@ -9,18 +9,18 @@ describe('loadEnv', () => {
 
     expect(env.NODE_ENV).toBe('production'); // fail-safe default (see hardening.test.ts)
     expect(env.PORT).toBe(3000);
-    expect(env.CORS_ORIGIN).toEqual(['http://localhost:5173']);
+    expect(env.FRONTEND_URL).toEqual(['http://localhost:5173']);
   });
 
-  it('coerces PORT and splits CORS_ORIGIN', () => {
+  it('coerces PORT and splits FRONTEND_URL', () => {
     const env = loadEnv({
       DATABASE_URL: DB,
       PORT: '4000',
-      CORS_ORIGIN: 'http://a.test, http://b.test',
+      FRONTEND_URL: 'http://a.test, http://b.test',
     });
 
     expect(env.PORT).toBe(4000);
-    expect(env.CORS_ORIGIN).toEqual(['http://a.test', 'http://b.test']);
+    expect(env.FRONTEND_URL).toEqual(['http://a.test', 'http://b.test']);
   });
 
   it('rejects an invalid PORT', () => {

@@ -16,11 +16,16 @@ cp .env.example .env   # adjust if needed; .env is git-ignored
 
 ## Database setup
 
-Requires a local PostgreSQL role and two databases (`timesheets_dev`, `timesheets_test`). Create them once and fill in `DATABASE_URL` / `TEST_DATABASE_URL` in `.env` as described in [docs/database-design.md](../docs/database-design.md). Then:
+Requires a local PostgreSQL role and one database (`timesheets_dev`). Create it once and fill in `DATABASE_URL` in `.env`. Tests and e2e use a sibling database, `timesheets_dev_test` (the name plus `_test`), which `npm run db:setup:test` creates and migrates automatically (it also runs before `npm test`) as described in [docs/database-design.md](../docs/database-design.md). Then:
 
 ```bash
-npm run db:migrate        # applies migrations to the dev database
-npm run db:migrate:test   # applies migrations to the test database (needed before npm test)
+npm run db:migrate        # applies migrations to the database
+```
+
+> `npm test` and the e2e suite empty only `timesheets_dev_test`; your development data is never touched.
+
+```bash
+
 ```
 
 ## Demo users (development only)
@@ -35,11 +40,11 @@ Re-running updates the password. Then `POST /api/auth/login` with e.g. `dev1@exa
 
 ## Environment variables
 
-| Name          | Default                 | Description                             |
-| ------------- | ----------------------- | --------------------------------------- |
-| `NODE_ENV`    | `development`           | `development`, `test` or `production`   |
-| `PORT`        | `3000`                  | HTTP port (1-65535)                     |
-| `CORS_ORIGIN` | `http://localhost:5173` | Comma-separated allowed browser origins |
+| Name               | Default                                  | Description                                           |
+| ------------------ | ---------------------------------------- | ----------------------------------------------------- |
+| `NODE_ENV`         | `development`                            | `development`, `test` or `production`                 |
+| `PORT`             | `3000`                                   | HTTP port (1-65535)                                   |
+| `FRONTEND_URL`     | `http://localhost:5173`                  | Comma-separated allowed browser origins               |
 | `API_DOCS_ENABLED` | on outside production, off in production | `true`/`false`: serve Swagger UI and the OpenAPI JSON |
 
 Variables are validated with Zod at startup ([src/config/env.ts](src/config/env.ts)); invalid values stop the process with a readable error.
@@ -48,8 +53,8 @@ Variables are validated with Zod at startup ([src/config/env.ts](src/config/env.
 
 With the backend running, open **http://localhost:3000/api-docs** (UI) or **http://localhost:3000/api-docs.json** (OpenAPI 3.0 document). They are served only outside production unless `API_DOCS_ENABLED=true`.
 
-1. Expand `POST /auth/login`, click **Try it out**, enter a user (see *Demo users*) and **Execute**. The browser stores the HttpOnly session cookie and sends it on every later call. The *Authorize* button is informational: Swagger UI cannot set a `Cookie` header itself.
-2. Write calls (POST/PATCH/DELETE) from the page send `Origin: http://localhost:3000`, which the CSRF allow-list rejects (403) unless it is in `CORS_ORIGIN`. Add it (`CORS_ORIGIN=http://localhost:5173,http://localhost:3000`), restart, then log in on the docs page.
+1. Expand `POST /auth/login`, click **Try it out**, enter a user (see _Demo users_) and **Execute**. The browser stores the HttpOnly session cookie and sends it on every later call. The _Authorize_ button is informational: Swagger UI cannot set a `Cookie` header itself.
+2. Write calls (POST/PATCH/DELETE) from the page send `Origin: http://localhost:3000`, which the CSRF allow-list rejects (403) unless it is in `FRONTEND_URL`. Add it (`FRONTEND_URL=http://localhost:5173,http://localhost:3000`), restart, then log in on the docs page.
 
 Request schemas are generated from the same Zod validators the routes use; response schemas live in [src/docs/components.ts](src/docs/components.ts) and the endpoint list in [src/docs/operations.ts](src/docs/operations.ts). `tests/openapi.test.ts` fails if a route is added without documentation or if a real response stops matching its documented schema. When you add or change an endpoint, update `src/docs/operations.ts` (and `components.ts` for a new response shape).
 

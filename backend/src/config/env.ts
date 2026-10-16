@@ -6,11 +6,6 @@ const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('production'),
   PORT: z.coerce.number().int().min(1).max(65535).default(3000),
   DATABASE_URL: z.string().regex(/^postgres(ql)?:\/\//, 'must be a PostgreSQL connection URL'),
-  // Only used by the test suite and `db:migrate:test`; must never equal DATABASE_URL.
-  TEST_DATABASE_URL: z
-    .string()
-    .regex(/^postgres(ql)?:\/\//)
-    .optional(),
   // Number of reverse-proxy hops in front of the app whose X-Forwarded-For is trusted for the client
   // IP (login throttling). 0 = no proxy: the header is ignored. Never "true": that would trust the
   // client-controlled left-most value and let an attacker dodge the limiter.
@@ -34,7 +29,7 @@ const envSchema = z.object({
     .enum(['true', 'false'])
     .optional()
     .transform((value) => (value === undefined ? undefined : value === 'true')),
-  CORS_ORIGIN: z
+  FRONTEND_URL: z
     .string()
     .default('http://localhost:5173')
     .transform((value) =>
