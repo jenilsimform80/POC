@@ -42,7 +42,7 @@ services:
       NODE_ENV: production
       PORT: "3000"
       DATABASE_URL: postgresql://timesheets_app:${DB_APP_PASSWORD}@db:5432/${DB_NAME:-timesheets}?schema=public
-      CORS_ORIGIN: ${PUBLIC_ORIGIN:-http://localhost:8080}
+      FRONTEND_URL: ${PUBLIC_ORIGIN:-http://localhost:8080}
       TRUST_PROXY: "1" # exactly one proxy hop: the nginx in the `web` service
       SESSION_TTL_HOURS: ${SESSION_TTL_HOURS:-8}
     depends_on:
