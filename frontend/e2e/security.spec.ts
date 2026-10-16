@@ -305,7 +305,7 @@ test.describe('security', () => {
     const attempt = async (email: string) => {
       await page.goto('/login');
       await page.getByLabel('Email').fill(email);
-      await page.getByLabel('Password').fill('wrong-wrong-wrong');
+      await page.getByLabel('Password', { exact: true }).fill('wrong-wrong-wrong');
       await page.getByRole('button', { name: 'Sign in' }).click();
       return (await page.getByRole('alert').textContent()) ?? '';
     };

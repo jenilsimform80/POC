@@ -19,7 +19,7 @@ test.describe.serial('timesheet workflow', () => {
     expect(new URL(page.url()).pathname).toBe('/login');
 
     await page.getByLabel('Email').fill(USERS.dev1);
-    await page.getByLabel('Password').fill('definitely-wrong-password');
+    await page.getByLabel('Password', { exact: true }).fill('definitely-wrong-password');
     await page.getByRole('button', { name: 'Sign in' }).click();
     await expect(
       page.getByRole('alert').filter({ hasText: 'Invalid email or password' }),
