@@ -46,13 +46,10 @@ describe('routing', () => {
       'page',
     );
 
-    await userEvent.click(screen.getByRole('link', { name: 'System status' }));
+    await userEvent.click(screen.getByRole('link', { name: 'Account' }));
 
-    expect(router.state.location.pathname).toBe('/status');
-    expect(screen.getByRole('link', { name: 'System status' })).toHaveAttribute(
-      'aria-current',
-      'page',
-    );
+    expect(router.state.location.pathname).toBe('/account');
+    expect(screen.getByRole('link', { name: 'Account' })).toHaveAttribute('aria-current', 'page');
     expect(screen.getByRole('link', { name: 'Home' })).not.toHaveAttribute('aria-current');
   });
 

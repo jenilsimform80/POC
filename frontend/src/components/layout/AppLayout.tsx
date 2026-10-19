@@ -15,7 +15,6 @@ import {
   HomeIcon,
   KeyIcon,
   LockIcon,
-  PulseIcon,
   UsersIcon,
   WalletIcon,
 } from './icons';
@@ -122,12 +121,6 @@ export function AppLayout() {
                 </NavLink>
               </li>
             ))}
-            <li className={styles.statusItem}>
-              <NavLink to="/status" className={linkClass}>
-                <PulseIcon />
-                System status
-              </NavLink>
-            </li>
           </ul>
         </nav>
       </aside>

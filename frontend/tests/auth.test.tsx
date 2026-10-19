@@ -199,30 +199,16 @@ describe('safeReturnPath', () => {
 
 describe('role-aware navigation (a convenience; the backend enforces access)', () => {
   it.each([
-    [
-      'contributor',
-      users.contributor,
-      ['Home', 'Timesheet', 'Projects', 'Reports', 'Account', 'System status'],
-    ],
+    ['contributor', users.contributor, ['Home', 'Timesheet', 'Projects', 'Reports', 'Account']],
     [
       'manager',
       users.manager,
-      ['Home', 'Timesheet', 'Approvals', 'Projects', 'Reports', 'Account', 'System status'],
+      ['Home', 'Timesheet', 'Approvals', 'Projects', 'Reports', 'Account'],
     ],
     [
       'admin',
       users.admin,
-      [
-        'Home',
-        'Timesheet',
-        'Projects',
-        'Reports',
-        'Budgets',
-        'Users',
-        'Locked periods',
-        'Account',
-        'System status',
-      ],
+      ['Home', 'Timesheet', 'Projects', 'Reports', 'Budgets', 'Users', 'Locked periods', 'Account'],
     ],
   ])('shows the right links for a %s', async (_label, user, expected) => {
     mockApi(signedInAs(user));

@@ -60,11 +60,6 @@ export const LockIcon = () => (
     <path d="M8 11V8a4 4 0 018 0v3" />
   </Icon>
 );
-export const PulseIcon = () => (
-  <Icon>
-    <path d="M3 12h4l3-8 4 16 3-8h4" />
-  </Icon>
-);
 export const UsersIcon = () => (
   <Icon>
     <circle cx="9" cy="8" r="3.2" />
