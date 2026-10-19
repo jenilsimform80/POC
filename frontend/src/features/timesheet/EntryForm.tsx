@@ -153,7 +153,7 @@ export function EntryForm({
       aria-label={entry ? 'Edit time entry' : 'Add time entry'}
     >
       {save.error && !hasFieldErrors && <Alert variant="error">{describeError(save.error)}</Alert>}
-      <div className="row">
+      <div className={styles.fields}>
         <SelectField
           label="Project"
           value={projectId}
