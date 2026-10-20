@@ -42,7 +42,7 @@ cd frontend && npm run dev
 
 Open **http://localhost:5173** (use `localhost`, **not** `127.0.0.1`: the backend only allows the origin `http://localhost:5173`, so anything else gets `403 Origin not allowed` on POST/PATCH/DELETE). Go to **System status**: API and database should show "Operational" / "Connected".
 
-The browser calls the backend directly at `VITE_API_URL` (see `.env.example`); `localhost:5173` and `localhost:3000` are the same site, so the session cookie works.
+The browser calls the backend directly at `VITE_API_URL` (see `.env.example`). Authentication is a bearer token kept in memory (ADR 0015), so there are no cookies and no same-site requirement; **reloading the page signs you out**.
 
 ## Environment variables
 

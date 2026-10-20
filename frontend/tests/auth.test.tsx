@@ -16,6 +16,7 @@ import {
   ok,
   renderRoutes,
   signedInAs,
+  tokenResponse,
   users,
 } from './helpers';
 
@@ -67,7 +68,7 @@ describe('session bootstrap and route guards', () => {
 
 describe('login', () => {
   it('lets the user reveal and re-hide the password, and signs in with what was typed', async () => {
-    const api = mockApi({ 'POST /auth/login': ok({ user: users.contributor }) });
+    const api = mockApi({ 'POST /auth/login': tokenResponse(users.contributor) });
     renderRoutes('/login');
     await screen.findByRole('heading', { name: 'Sign in' });
     const password = screen.getByLabelText('Password');
@@ -93,7 +94,7 @@ describe('login', () => {
   });
 
   it('signs in, sends the credentials once, and lands on the home page', async () => {
-    const api = mockApi({ 'POST /auth/login': ok({ user: users.contributor }) });
+    const api = mockApi({ 'POST /auth/login': tokenResponse(users.contributor) });
     renderRoutes('/login');
     await screen.findByRole('heading', { name: 'Sign in' });
 
@@ -114,7 +115,7 @@ describe('login', () => {
 
   it('returns to the page the user originally asked for', async () => {
     mockApi({
-      'POST /auth/login': ok({ user: users.manager }),
+      'POST /auth/login': tokenResponse(users.manager),
       'GET /health': healthOk(),
       'GET /health/db': dbUp(),
     });
@@ -237,6 +238,7 @@ describe('sign out and expired sessions', () => {
     // Admin is on /users, signs out; a contributor (who cannot open /users) then signs in.
     let current: typeof users.admin | typeof users.contributor | null = users.admin;
     mockApi({
+      ...signedInAs(users.admin), // seeds the in-memory tokens; /auth/me is overridden below
       'GET /auth/me': () =>
         current ? ok({ user: current }) : fail(401, 'UNAUTHENTICATED', 'Authentication required'),
       'GET /users': ok({ users: [users.admin] }),
@@ -246,7 +248,7 @@ describe('sign out and expired sessions', () => {
       },
       'POST /auth/login': () => {
         current = users.contributor;
-        return ok({ user: current });
+        return tokenResponse(current, '2');
       },
     });
     const { router } = renderRoutes('/users');
@@ -303,6 +305,8 @@ describe('sign out and expired sessions', () => {
     mockApi({
       ...signedInAs(users.contributor),
       'GET /projects': fail(401, 'UNAUTHENTICATED', 'Authentication required'),
+      // the silent refresh is tried first, and the session really is gone
+      'POST /auth/refresh': fail(401, 'UNAUTHENTICATED', 'Invalid or expired refresh token'),
     });
     const [root] = routes;
     if (!root || root.index) throw new Error('expected a non-index root route');

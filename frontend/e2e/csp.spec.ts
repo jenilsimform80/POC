@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { newSession } from './support/helpers';
+import { USERS, appGoto, newSession, uiSignIn } from './support/helpers';
 
 /**
  * Every screen must work under the strict Content-Security-Policy the production web server sends
@@ -30,6 +30,8 @@ test('every screen renders without a single CSP violation', async ({ browser }) 
     );
   };
 
+  // A full page load: the only way to read the response headers. Tokens are memory-only, so this
+  // signs the session out; sign in again through the UI and move around without reloading.
   const landing = await page.goto('/');
   if (process.env['E2E_EXPECT_CSP'] === '1') {
     const csp = landing?.headers()['content-security-policy'] ?? '';
@@ -40,6 +42,7 @@ test('every screen renders without a single CSP violation', async ({ browser }) 
     expect(landing?.headers()['x-content-type-options']).toBe('nosniff');
     expect(landing?.headers()['referrer-policy']).toBe('no-referrer');
   }
+  await uiSignIn(page, USERS.admin);
 
   for (const [path, heading] of [
     ['/', /Welcome/],
@@ -52,7 +55,7 @@ test('every screen renders without a single CSP violation', async ({ browser }) 
     ['/status', 'System status'],
     ['/this/page/does/not/exist', null],
   ] as const) {
-    await page.goto(path);
+    await appGoto(page, path);
     if (heading) await expect(page.getByRole('heading', { name: heading })).toBeVisible();
     else await expect(page.getByRole('main')).toBeVisible();
     await collect();

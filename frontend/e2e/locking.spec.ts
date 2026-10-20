@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { createEntry, createProject, newSession, uniqueCode } from './support/helpers';
+import { appGoto, createEntry, createProject, newSession, uniqueCode } from './support/helpers';
 
 /**
  * Period locking, proven through the real UI AND by calling the API directly with the contributor's
@@ -11,19 +11,19 @@ test.describe.serial('period locking', () => {
 
   test('setup: a project and two entries (one in May, one in June)', async ({ browser }) => {
     const admin = await newSession(browser, 'admin');
-    Object.assign(ids, await createProject(admin.context.request, code));
+    Object.assign(ids, await createProject(admin.api, code));
     await admin.context.close();
 
     const dev = await newSession(browser, 'dev1');
     const base = { projectId: ids.projectId, taskId: ids.taskId, hours: 4 };
-    ids.mayEntry = await createEntry(dev.context.request, { ...base, workDate: '2027-05-04' });
-    ids.juneEntry = await createEntry(dev.context.request, { ...base, workDate: '2027-06-01' });
+    ids.mayEntry = await createEntry(dev.api, { ...base, workDate: '2027-05-04' });
+    ids.juneEntry = await createEntry(dev.api, { ...base, workDate: '2027-06-01' });
     await dev.context.close();
   });
 
   test('admin locks May 2027 in the UI; the contributor sees it locked', async ({ browser }) => {
     const admin = await newSession(browser, 'admin');
-    await admin.page.goto('/periods');
+    await appGoto(admin.page, '/periods');
     const form = admin.page.getByRole('form', { name: 'Lock a month' });
     await form.getByLabel('Month').fill('2027-05');
     await form.getByLabel('Note (optional)').fill('May billed');
@@ -32,12 +32,12 @@ test.describe.serial('period locking', () => {
     await admin.context.close();
 
     const dev = await newSession(browser, 'dev1');
-    await dev.page.goto('/timesheet?week=2027-05-03');
+    await appGoto(dev.page, '/timesheet?week=2027-05-03');
     await expect(dev.page.getByText('This month is locked for billing.').first()).toBeVisible();
     await expect(
       dev.page.getByRole('button', { name: /Add entry on|^Edit entry|^Delete entry/ }),
     ).toHaveCount(0);
-    await dev.page.goto('/timesheet?week=2027-05-31'); // week spanning May/June: June days stay editable
+    await appGoto(dev.page, '/timesheet?week=2027-05-31'); // week spanning May/June: June days stay editable
     await expect(dev.page.getByRole('button', { name: 'Add entry on Tue 1 Jun' })).toBeVisible();
     await expect(dev.page.getByRole('button', { name: 'Add entry on Mon 31 May' })).toHaveCount(0);
     await dev.context.close();
@@ -47,7 +47,7 @@ test.describe.serial('period locking', () => {
     browser,
   }) => {
     const dev = await newSession(browser, 'dev1');
-    const api = dev.context.request;
+    const api = dev.api;
     const refuse = async (res: Awaited<ReturnType<typeof api.post>>) => {
       expect(res.status()).toBe(409);
       const body = (await res.json()) as {
@@ -93,7 +93,7 @@ test.describe.serial('period locking', () => {
   test('admins are not exempt from the lock', async ({ browser }) => {
     const admin = await newSession(browser, 'admin');
 
-    const res = await admin.context.request.post('/api/time-entries', {
+    const res = await admin.api.post('/api/time-entries', {
       data: {
         projectId: ids.projectId,
         taskId: ids.taskId,
@@ -111,7 +111,7 @@ test.describe.serial('period locking', () => {
     browser,
   }) => {
     const admin = await newSession(browser, 'admin');
-    await admin.page.goto('/periods');
+    await appGoto(admin.page, '/periods');
     await admin.page.getByRole('button', { name: 'Unlock May 2027' }).click();
     const form = admin.page.getByRole('form', { name: 'Unlock May 2027' });
     await form.getByLabel('Reason').fill('ab');
@@ -123,13 +123,11 @@ test.describe.serial('period locking', () => {
 
     const dev = await newSession(browser, 'dev1');
     expect(
-      (
-        await dev.context.request.patch(`/api/time-entries/${ids.mayEntry}`, { data: { hours: 3 } })
-      ).status(),
+      (await dev.api.patch(`/api/time-entries/${ids.mayEntry}`, { data: { hours: 3 } })).status(),
     ).toBe(200);
     await dev.context.close();
 
-    const audit = await admin.context.request.get('/api/audit-logs?entityType=locked_period');
+    const audit = await admin.api.get('/api/audit-logs?entityType=locked_period');
     const logs = (
       (await audit.json()) as {
         auditLogs: {

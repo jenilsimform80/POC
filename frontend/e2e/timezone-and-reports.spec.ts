@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { createEntry, createProject, newSession, uniqueCode } from './support/helpers';
+import { appGoto, createEntry, createProject, newSession, uniqueCode } from './support/helpers';
 
 /**
  * Calendar dates must never move with the viewer's time zone (ADR 0006). Entries sit on the
@@ -12,13 +12,13 @@ test.describe('time zones and report accuracy', () => {
 
   test.beforeAll(async ({ browser }) => {
     const admin = await newSession(browser, 'admin');
-    Object.assign(ids, await createProject(admin.context.request, code, { budgetHours: 20 }));
+    Object.assign(ids, await createProject(admin.api, code, { budgetHours: 20 }));
     await admin.context.close();
     const dev = await newSession(browser, 'dev1');
     // Mon 30 Aug 2027 is the week start. Tue 31 Aug (3 h billable) and Wed 1 Sep (5 h, 2 of which are a separate non-billable entry).
-    await createEntry(dev.context.request, { ...ids, workDate: '2027-08-31', hours: 3 });
-    await createEntry(dev.context.request, { ...ids, workDate: '2027-09-01', hours: 3 });
-    await createEntry(dev.context.request, {
+    await createEntry(dev.api, { ...ids, workDate: '2027-08-31', hours: 3 });
+    await createEntry(dev.api, { ...ids, workDate: '2027-09-01', hours: 3 });
+    await createEntry(dev.api, {
       ...ids,
       workDate: '2027-09-01',
       hours: 2,
@@ -34,13 +34,13 @@ test.describe('time zones and report accuracy', () => {
     'Pacific/Pago_Pago',
   ]) {
     test(`week view, report and API agree in ${timezoneId}`, async ({ browser }) => {
-      const { context, page } = await newSession(browser, 'dev1', { timezoneId });
+      const { context, page, api } = await newSession(browser, 'dev1', { timezoneId });
       expect(await page.evaluate(() => Intl.DateTimeFormat().resolvedOptions().timeZone)).toBe(
         timezoneId,
       );
 
       // Week view: the same days carry the same hours whatever the viewer's zone.
-      await page.goto('/timesheet?week=2027-08-30');
+      await appGoto(page, '/timesheet?week=2027-08-30');
       await expect(page.getByText('30 Aug – 5 Sep 2027')).toBeVisible();
       await expect(
         page.getByRole('region', { name: 'Tue 31 Aug' }).getByText('3 h').first(),
@@ -51,7 +51,7 @@ test.describe('time zones and report accuracy', () => {
       await expect(page.getByText('8 h', { exact: true }).first()).toBeVisible(); // week total
 
       // Report by month through the UI form.
-      await page.goto('/reports');
+      await appGoto(page, '/reports');
       await page.getByLabel('From').fill('2027-08-01');
       await page.getByLabel('To', { exact: true }).fill('2027-09-30');
       await page.getByRole('button', { name: 'Run report' }).click();
@@ -63,7 +63,7 @@ test.describe('time zones and report accuracy', () => {
       await expect(september.getByRole('cell').nth(3)).toHaveText('2'); // non-billable
 
       // The API the page used gives identical numbers, and so does the week summary.
-      const report = await context.request.get(
+      const report = await api.get(
         '/api/reports/hours?from=2027-08-01&to=2027-09-30&groupBy=month',
       );
       expect(
@@ -74,7 +74,7 @@ test.describe('time zones and report accuracy', () => {
         ['2027-08', 3],
         ['2027-09', 5],
       ]);
-      const week = (await (await context.request.get('/api/timesheets/2027-08-30')).json()) as {
+      const week = (await (await api.get('/api/timesheets/2027-08-30')).json()) as {
         weeklyTotal: number;
         dailyTotals: Record<string, number>;
       };
@@ -89,7 +89,7 @@ test.describe('time zones and report accuracy', () => {
       timezoneId: 'Pacific/Kiritimati',
     });
 
-    await page.goto('/reports/budgets');
+    await appGoto(page, '/reports/budgets');
 
     const row = page.getByRole('row').filter({ hasText: code });
     await expect(row).toContainText('40%');
@@ -101,9 +101,9 @@ test.describe('time zones and report accuracy', () => {
   test('reports agree with themselves: per-contributor, per-project and per-month totals are the same 8 h', async ({
     browser,
   }) => {
-    const { context } = await newSession(browser, 'admin');
+    const { context, api } = await newSession(browser, 'admin');
     const total = async (groupBy: string) => {
-      const res = await context.request.get(
+      const res = await api.get(
         `/api/reports/hours?from=2027-08-01&to=2027-09-30&groupBy=${groupBy}`,
       );
       const body = (await res.json()) as {

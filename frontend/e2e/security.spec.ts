@@ -4,14 +4,16 @@ import {
   createEntry,
   createProject,
   newSession,
+  apiOrigin,
+  appGoto,
+  apiLoginTokens,
   nav,
+  password,
   uiSignOut,
   uniqueCode,
 } from './support/helpers';
 
 /** Security properties of the integrated system, checked from a real browser session. */
-// The session cookie is `sid` in development and `__Host-sid` (Secure) in production.
-const SID = process.env['E2E_COOKIE_NAME'] ?? 'sid';
 
 test.describe('security', () => {
   const code = uniqueCode('SEC');
@@ -19,14 +21,14 @@ test.describe('security', () => {
 
   test.beforeAll(async ({ browser }) => {
     const admin = await newSession(browser, 'admin');
-    const ids = await createProject(admin.context.request, code);
+    const ids = await createProject(admin.api, code);
     Object.assign(data, ids);
     await admin.context.close();
     const dev2 = await newSession(browser, 'dev2');
     data.dev2Id = (
-      (await (await dev2.context.request.get('/api/auth/me')).json()) as { user: { id: string } }
+      (await (await dev2.api.get('/api/auth/me')).json()) as { user: { id: string } }
     ).user.id;
-    data.dev2Entry = await createEntry(dev2.context.request, {
+    data.dev2Entry = await createEntry(dev2.api, {
       ...ids,
       workDate: '2027-02-02',
       hours: 3,
@@ -35,8 +37,8 @@ test.describe('security', () => {
     await dev2.context.close();
   });
 
-  test('every API area refuses anonymous callers', async ({ playwright, baseURL }) => {
-    const anonymous = await playwright.request.newContext({ baseURL });
+  test('every API area refuses anonymous callers', async ({ playwright }) => {
+    const anonymous = await playwright.request.newContext({ baseURL: apiOrigin() });
     for (const path of [
       '/api/users',
       '/api/projects',
@@ -57,45 +59,56 @@ test.describe('security', () => {
     await anonymous.dispose();
   });
 
-  test('the session cookie is HttpOnly + SameSite=Lax and cannot be read by page scripts', async ({
+  test('tokens are memory-only: not in cookies or web storage, and a reload signs out', async ({
     browser,
   }) => {
     const { context, page } = await newSession(browser, 'dev1');
-    await page.goto('/');
-    const cookie = (await context.cookies()).find((c) => c.name === SID);
-    expect(cookie).toMatchObject({
-      httpOnly: true,
-      sameSite: 'Lax',
-      path: '/',
-      secure: SID.startsWith('__Host-'),
-    });
 
-    const visible = await page.evaluate(() => document.cookie);
-    expect(visible).not.toContain('sid=');
-    const storage = await page.evaluate(
-      () => JSON.stringify({ ...localStorage }) + JSON.stringify({ ...sessionStorage }),
-    );
-    expect(storage).not.toContain(cookie?.value ?? 'x');
+    const visible = await page.evaluate(() => ({
+      cookie: document.cookie,
+      storage: JSON.stringify({ ...localStorage }) + JSON.stringify({ ...sessionStorage }),
+    }));
+    expect(visible.cookie).toBe('');
+    expect(visible.storage).not.toMatch(/eyJ|token/i); // no JWT, no refresh token
+    expect(await context.cookies()).toEqual([]);
+
+    await page.reload(); // memory is gone: the price of keeping tokens out of reach of storage reads
+    await expect(page.getByRole('heading', { name: 'Sign in' })).toBeVisible();
     await context.close();
   });
 
-  test('signing out ends the session on the server: a replayed cookie is dead', async ({
+  test('signing out ends the session on the server: copied tokens are dead', async ({
     browser,
     playwright,
-    baseURL,
   }) => {
-    const { context, page } = await newSession(browser, 'dev1');
-    await page.goto('/');
-    const stolen = (await context.cookies()).find((c) => c.name === SID)!.value;
-
-    await uiSignOut(page);
-
-    const replay = await playwright.request.newContext({
-      baseURL,
-      extraHTTPHeaders: { Cookie: `${SID}=${stolen}` },
+    // Sign in through the API so the test holds both tokens, exactly like an attacker who copied them.
+    const anonymous = await playwright.request.newContext({ baseURL: apiOrigin() });
+    const stolen = await apiLoginTokens(anonymous, USERS.dev1);
+    const asStolen = await playwright.request.newContext({
+      baseURL: apiOrigin(),
+      extraHTTPHeaders: { Authorization: `Bearer ${stolen.accessToken}` },
     });
-    expect((await replay.get('/api/auth/me')).status()).toBe(401);
-    await replay.dispose();
+    expect((await asStolen.get('/api/auth/me')).status()).toBe(200);
+
+    const out = await anonymous.post('/api/auth/logout', {
+      data: { refreshToken: stolen.refreshToken },
+    });
+
+    expect(out.status()).toBe(204);
+    expect((await asStolen.get('/api/auth/me')).status()).toBe(401); // JWT unexpired, session gone
+    expect(
+      (
+        await anonymous.post('/api/auth/refresh', { data: { refreshToken: stolen.refreshToken } })
+      ).status(),
+    ).toBe(401);
+    await asStolen.dispose();
+    await anonymous.dispose();
+
+    // And through the UI: Sign out also removes the tokens from memory.
+    const { context, page } = await newSession(browser, 'dev1');
+    await uiSignOut(page);
+    await appGoto(page, '/timesheet');
+    await expect(page.getByRole('heading', { name: 'Sign in' })).toBeVisible();
     await context.close();
   });
 
@@ -103,8 +116,7 @@ test.describe('security', () => {
     browser,
   }) => {
     const dev1 = await newSession(browser, 'dev1');
-    const api = dev1.context.request;
-
+    const api = dev1.api;
     expect((await api.get(`/api/time-entries/${data.dev2Entry}`)).status()).toBe(404);
     expect(
       (await api.patch(`/api/time-entries/${data.dev2Entry}`, { data: { hours: 1 } })).status(),
@@ -125,10 +137,8 @@ test.describe('security', () => {
     browser,
   }) => {
     const other = await newSession(browser, 'otherManager');
-    expect((await other.context.request.get(`/api/time-entries/${data.dev2Entry}`)).status()).toBe(
-      404,
-    ); // not their report
-    const users = (await (await other.context.request.get('/api/users')).json()) as {
+    expect((await other.api.get(`/api/time-entries/${data.dev2Entry}`)).status()).toBe(404); // not their report
+    const users = (await (await other.api.get('/api/users')).json()) as {
       users: { email: string }[];
     };
     expect(users.users.map((u) => u.email)).toEqual([USERS.otherManager]); // only themself
@@ -142,10 +152,7 @@ test.describe('security', () => {
         ['POST', '/api/locked-periods'],
         ['POST', '/api/projects'],
       ] as const) {
-        const res =
-          method === 'GET'
-            ? await s.context.request.get(path)
-            : await s.context.request.post(path, { data: {} });
+        const res = method === 'GET' ? await s.api.get(path) : await s.api.post(path, { data: {} });
         expect(res.status(), `${who} ${method} ${path}`).toBe(403);
       }
       await s.context.close();
@@ -154,13 +161,13 @@ test.describe('security', () => {
 
   test('admins cannot approve timesheets; only the owner’s manager can', async ({ browser }) => {
     const dev1 = await newSession(browser, 'dev1');
-    await createEntry(dev1.context.request, {
+    await createEntry(dev1.api, {
       projectId: data.projectId,
       taskId: data.taskId,
       workDate: '2027-03-02',
       hours: 2,
     });
-    const sub = await dev1.context.request.post('/api/submissions', {
+    const sub = await dev1.api.post('/api/submissions', {
       data: { weekStart: '2027-03-01' },
     });
     expect(sub.status()).toBe(201);
@@ -168,67 +175,61 @@ test.describe('security', () => {
     await dev1.context.close();
 
     const admin = await newSession(browser, 'admin');
-    expect(
-      (await admin.context.request.post(`/api/submissions/${id}/approve`, { data: {} })).status(),
-    ).toBe(403);
+    expect((await admin.api.post(`/api/submissions/${id}/approve`, { data: {} })).status()).toBe(
+      403,
+    );
     await admin.context.close();
     const other = await newSession(browser, 'otherManager');
-    expect(
-      (await other.context.request.post(`/api/submissions/${id}/approve`, { data: {} })).status(),
-    ).toBe(404);
+    expect((await other.api.post(`/api/submissions/${id}/approve`, { data: {} })).status()).toBe(
+      404,
+    );
     await other.context.close();
     const manager = await newSession(browser, 'manager');
-    expect(
-      (await manager.context.request.post(`/api/submissions/${id}/approve`, { data: {} })).status(),
-    ).toBe(200);
+    expect((await manager.api.post(`/api/submissions/${id}/approve`, { data: {} })).status()).toBe(
+      200,
+    );
     await manager.context.close();
   });
 
-  test('cross-site writes are refused: a foreign Origin gets 403 even with a valid session', async ({
-    browser,
-    baseURL,
+  test('credentials are never ambient: a request carrying no Authorization header is refused', async ({
+    playwright,
   }) => {
-    const { context } = await newSession(browser, 'dev1');
-    const body = {
-      projectId: data.projectId,
-      taskId: data.taskId,
-      workDate: '2027-04-06',
-      hours: 1,
-      isBillable: true,
-    };
-
-    const evil = await context.request.post('/api/time-entries', {
-      data: body,
+    // A cross-site page can make the browser send cookies, but it cannot make it send a bearer
+    // header; with no cookie auth at all there is nothing for a forged request to ride on.
+    const anonymous = await playwright.request.newContext({ baseURL: apiOrigin() });
+    await anonymous.post('/api/auth/login', {
+      data: { email: USERS.dev1, password: password() },
       headers: { Origin: 'https://evil.example' },
     });
-    const nullOrigin = await context.request.post('/api/time-entries', {
-      data: body,
-      headers: { Origin: 'null' },
-    });
-    const ours = await context.request.post('/api/time-entries', {
-      data: body,
-      headers: { Origin: new URL(baseURL ?? 'http://127.0.0.1:5173').origin },
+    const forged = await anonymous.post('/api/time-entries', {
+      data: {
+        projectId: data.projectId,
+        taskId: data.taskId,
+        workDate: '2027-04-06',
+        hours: 1,
+        isBillable: true,
+      },
+      headers: { Origin: 'https://evil.example' },
     });
 
-    expect(evil.status()).toBe(403);
-    expect(nullOrigin.status()).toBe(403);
-    expect(ours.status()).toBe(201);
-    await context.close();
+    expect(forged.status()).toBe(401);
+    expect((await anonymous.storageState()).cookies).toEqual([]);
+    await anonymous.dispose();
   });
 
   test('screens hide what a role cannot use, and guarded pages say so', async ({ browser }) => {
     const manager = await newSession(browser, 'manager');
-    await manager.page.goto('/');
+    await appGoto(manager.page, '/');
     await expect(nav(manager.page, 'Approvals')).toBeVisible();
     await expect(nav(manager.page, 'Locked periods')).toHaveCount(0);
-    await manager.page.goto('/periods');
+    await appGoto(manager.page, '/periods');
     await expect(manager.page.getByText("You don't have access to this page")).toBeVisible();
     await manager.context.close();
 
     const dev = await newSession(browser, 'dev1');
-    await dev.page.goto('/approvals');
+    await appGoto(dev.page, '/approvals');
     await expect(dev.page.getByText("You don't have access to this page")).toBeVisible();
-    await dev.page.goto('/projects');
+    await appGoto(dev.page, '/projects');
     await expect(dev.page.getByText('Budget')).toHaveCount(0); // allocated hours are admin-only
     await dev.context.close();
   });
@@ -236,7 +237,7 @@ test.describe('security', () => {
   test('user-supplied text is rendered as text, never executed', async ({ browser }) => {
     const dev = await newSession(browser, 'dev1');
     const payload = '<img src=x onerror="window.__xss=1"><script>window.__xss=2</script>';
-    await createEntry(dev.context.request, {
+    await createEntry(dev.api, {
       projectId: data.projectId,
       taskId: data.taskId,
       workDate: '2027-05-18',
@@ -244,7 +245,7 @@ test.describe('security', () => {
       notes: payload,
     });
 
-    await dev.page.goto('/timesheet?week=2027-05-17');
+    await appGoto(dev.page, '/timesheet?week=2027-05-17');
 
     await expect(dev.page.getByText(payload, { exact: true })).toBeVisible();
     expect(
@@ -257,8 +258,7 @@ test.describe('security', () => {
   test('hostile input is answered with 4xx (NUL bytes, oversized and malformed bodies), never 500', async ({
     browser,
   }) => {
-    const { context } = await newSession(browser, 'dev1');
-    const api = context.request;
+    const { context, api } = await newSession(browser, 'dev1');
     const entry = {
       projectId: data.projectId,
       taskId: data.taskId,
@@ -290,11 +290,11 @@ test.describe('security', () => {
   });
 
   test('API responses are not cacheable', async ({ browser }) => {
-    const { context } = await newSession(browser, 'admin');
-    const res = await context.request.get('/api/projects');
+    const { context, api } = await newSession(browser, 'admin');
+    const res = await api.get('/api/projects');
 
     expect(res.headers()['cache-control']).toBe('no-store');
-    expect(res.headers()['vary']).toMatch(/Cookie/i);
+    expect(res.headers()['vary']).toMatch(/Authorization/i);
     expect(res.headers()['etag']).toBeUndefined();
     expect(res.headers()['x-powered-by']).toBeUndefined();
     expect(res.headers()['x-content-type-options']).toBe('nosniff');

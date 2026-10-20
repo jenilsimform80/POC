@@ -2,6 +2,7 @@ import { render } from '@testing-library/react';
 import { vi } from 'vitest';
 import { createMemoryRouter, RouterProvider, type RouteObject } from 'react-router';
 import type { Project, TimeEntry, User, WeekSummary } from '../src/api/types';
+import { setTokens } from '../src/api/token-store';
 import { routes } from '../src/routes';
 
 // ---------- responses ----------
@@ -136,9 +137,25 @@ export const users = {
   },
 } satisfies Record<string, User>;
 
-export const signedInAs = (user: User): Record<string, Responder> => ({
-  'GET /auth/me': ok({ user }),
-});
+/** The body of a successful login/refresh. */
+export const tokenResponse = (user: User, suffix = '1') =>
+  ok({
+    user,
+    tokenType: 'Bearer',
+    accessToken: `access-${suffix}`,
+    expiresIn: 900,
+    refreshToken: `refresh-${suffix}`,
+    refreshTokenExpiresAt: '2026-03-02T18:00:00.000Z',
+  });
+
+/**
+ * Handlers for a signed-in visitor. Tokens only live in memory in the real app (so a fresh page
+ * load is signed out); here we seed that memory, which is what a visit after sign-in looks like.
+ */
+export const signedInAs = (user: User): Record<string, Responder> => {
+  setTokens({ accessToken: 'test-access-token', refreshToken: 'test-refresh-token' });
+  return { 'GET /auth/me': ok({ user }) };
+};
 
 export const project = (overrides: Partial<Project> = {}): Project => ({
   id: 'p1',

@@ -1,7 +1,15 @@
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
-import { fail, mockApi, noContent, renderRoutes, signedInAs, users } from './helpers';
+import {
+  fail,
+  mockApi,
+  noContent,
+  renderRoutes,
+  signedInAs,
+  tokenResponse,
+  users,
+} from './helpers';
 
 const fill = async (current: string, next: string, confirm: string) => {
   const user = userEvent.setup();
@@ -58,6 +66,8 @@ describe('account: change password', () => {
     mockApi({
       ...signedInAs(users.contributor),
       'POST /auth/change-password': fail(401, 'UNAUTHENTICATED', 'Current password is incorrect'),
+      // a 401 here first tries a silent token refresh; it works, so the 401 really was the password
+      'POST /auth/refresh': tokenResponse(users.contributor, '2'),
     });
     renderRoutes('/account');
     await screen.findByRole('heading', { name: 'Account' });

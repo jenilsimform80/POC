@@ -1,5 +1,6 @@
 import {
   expect,
+  request,
   type APIRequestContext,
   type Browser,
   type BrowserContext,
@@ -21,18 +22,45 @@ export const password = (): string => {
   return value;
 };
 
-/** Sign in through the API (fast); the session cookie lands in the browser context. */
-export async function apiLogin(request: APIRequestContext, email: string): Promise<void> {
+/**
+ * Where the API answers for Playwright's request clients. In the default dev stack that is the
+ * backend itself (Vite does not proxy); against a production-like stack (E2E_EXTERNAL_SERVERS=1)
+ * nginx serves SPA and `/api` from one origin. Override with E2E_API_ORIGIN.
+ */
+export const apiOrigin = (): string =>
+  process.env['E2E_API_ORIGIN'] ??
+  (process.env['E2E_EXTERNAL_SERVERS'] === '1'
+    ? (process.env['E2E_BASE_URL'] ?? 'http://127.0.0.1:8080')
+    : `http://127.0.0.1:${process.env['E2E_BACKEND_PORT'] ?? '3000'}`);
+
+export interface ApiTokens {
+  accessToken: string;
+  refreshToken: string;
+}
+
+/** Signs in through the API and returns the bearer tokens (the API has no cookies any more). */
+export async function apiLoginTokens(
+  request: APIRequestContext,
+  email: string,
+): Promise<ApiTokens> {
   const res = await request.post('/api/auth/login', { data: { email, password: password() } });
   expect(res.status(), `login as ${email}`).toBe(200);
+  return (await res.json()) as ApiTokens;
 }
 
 export interface Session {
   context: BrowserContext;
+  /** The page, signed in through the real login form. Tokens live in its memory only. */
   page: Page;
+  /** An API client signed in as the same user (its own session) for fast set-up and API assertions. */
+  api: APIRequestContext;
 }
 
-/** A fresh browser context signed in as `user`, optionally in another time zone. */
+/**
+ * A fresh browser context signed in as `user`, optionally in another time zone. The page is signed
+ * in through the UI (tokens are memory-only, so a full page load would sign it out: use `appGoto`
+ * to move around, not `page.goto`).
+ */
 export async function newSession(
   browser: Browser,
   user: UserKey,
@@ -41,15 +69,36 @@ export async function newSession(
   const context = await browser.newContext({
     ...(options.timezoneId && { timezoneId: options.timezoneId }),
   });
-  await apiLogin(context.request, USERS[user]);
-  return { context, page: await context.newPage() };
+  const baseURL = apiOrigin();
+  const anonymous = await request.newContext({ baseURL });
+  const { accessToken } = await apiLoginTokens(anonymous, USERS[user]);
+  await anonymous.dispose();
+  const api = await request.newContext({
+    baseURL,
+    extraHTTPHeaders: { Authorization: `Bearer ${accessToken}` },
+  });
+  const page = await context.newPage();
+  await uiSignIn(page, USERS[user]);
+  return { context, page, api };
+}
+
+/**
+ * Navigates inside the running single-page app WITHOUT a page load (history push + popstate, which
+ * React Router listens to). A real `page.goto` reloads the document and, since the bearer tokens
+ * are kept in memory only, would sign the user out.
+ */
+export async function appGoto(page: Page, path: string): Promise<void> {
+  await page.evaluate((to) => {
+    window.history.pushState({}, '', to);
+    window.dispatchEvent(new PopStateEvent('popstate'));
+  }, path);
 }
 
 /** Sign in through the real login form. */
 export async function uiSignIn(page: Page, email: string): Promise<void> {
   await page.goto('/login');
   await page.getByLabel('Email').fill(email);
-  await page.getByLabel('Password').fill(password());
+  await page.getByLabel('Password', { exact: true }).fill(password());
   await page.getByRole('button', { name: 'Sign in' }).click();
   await expect(page.getByRole('button', { name: 'Sign out' })).toBeVisible();
 }

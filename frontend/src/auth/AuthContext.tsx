@@ -22,9 +22,10 @@ export interface AuthContextValue {
 export const AuthContext = createContext<AuthContextValue | null>(null);
 
 /**
- * Owns "who is signed in". The server session (HttpOnly cookie) is the source of truth: on load
- * we ask `/auth/me`; any later 401 from the API drops us to anonymous (central handler), which the
- * route guards turn into a redirect to the login page.
+ * Owns "who is signed in". The bearer tokens live in memory only (see token-store.ts), so a fresh
+ * page load has none and starts signed out. If tokens are present (e.g. the provider remounted) we
+ * confirm them with `/auth/me`. Any later unrecoverable 401 drops us to anonymous (central handler,
+ * after a failed silent refresh), which the route guards turn into a redirect to the login page.
  */
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<AuthState>({ status: 'loading' });

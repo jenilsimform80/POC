@@ -1,5 +1,13 @@
 import { expect, test } from '@playwright/test';
-import { USERS, newSession, nav, uiSignIn, uiSignOut, uniqueCode } from './support/helpers';
+import {
+  USERS,
+  appGoto,
+  newSession,
+  nav,
+  uiSignIn,
+  uiSignOut,
+  uniqueCode,
+} from './support/helpers';
 
 /**
  * The core business workflow through the real UI, backend and database:
@@ -49,7 +57,7 @@ test.describe.serial('timesheet workflow', () => {
 
   test('contributor logs hours, hits the daily limit, and submits the week', async ({ page }) => {
     await uiSignIn(page, USERS.dev1);
-    await page.goto('/timesheet?week=2026-10-05');
+    await appGoto(page, '/timesheet?week=2026-10-05');
     await expect(page.getByText('h total')).toBeVisible();
 
     const add = async (
@@ -107,7 +115,7 @@ test.describe.serial('timesheet workflow', () => {
     await uiSignOut(page);
 
     await uiSignIn(page, USERS.dev1);
-    await page.goto('/timesheet?week=2026-10-05');
+    await appGoto(page, '/timesheet?week=2026-10-05');
     await expect(page.getByText(/Please add Wednesday/)).toBeVisible();
     await page.getByRole('button', { name: 'Add entry on Wed 7 Oct' }).click();
     const form = page.getByRole('form', { name: 'Add time entry' });
@@ -136,7 +144,7 @@ test.describe.serial('timesheet workflow', () => {
     await uiSignOut(page);
 
     await uiSignIn(page, USERS.dev1);
-    await page.goto('/timesheet?week=2026-10-05');
+    await appGoto(page, '/timesheet?week=2026-10-05');
     await expect(page.getByText('Approved', { exact: true }).first()).toBeVisible();
     await expect(
       page.getByRole('button', { name: /Edit entry|Delete entry|Add entry on/ }),
@@ -147,7 +155,7 @@ test.describe.serial('timesheet workflow', () => {
     browser,
   }) => {
     const { page, context } = await newSession(browser, 'admin');
-    await page.goto('/reports');
+    await appGoto(page, '/reports');
     await page.getByLabel('From').fill('2026-10-01');
     await page.getByLabel('To', { exact: true }).fill('2026-10-31');
     const filters = page.getByRole('form', { name: 'Report filters' });
