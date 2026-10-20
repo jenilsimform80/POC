@@ -1,6 +1,6 @@
 # 0003. Server-side cookie sessions with argon2id
 
-Status: Accepted (Phase 3)
+Status: Accepted (Phase 3). **The cookie transport is superseded by [ADR 0015](0015-bearer-token-authentication.md)** (bearer tokens); the hashed server-side session row, argon2id and uniform login errors still apply.
 
 Context: The SPA and API are separate packages (different origins in development). We need login, real logout, and role/ownership checks enforced on the backend.
 

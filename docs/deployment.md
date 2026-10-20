@@ -32,7 +32,9 @@ Prerequisites: Docker Engine with the Compose plugin (v2), ~2 GB disk.
    | `DB_APP_PASSWORD` | role the running backend uses: `SELECT/INSERT/UPDATE/DELETE` only |
    | `PUBLIC_ORIGIN` | the exact URL users open (default `http://localhost:8080`); becomes the backend `FRONTEND_URL` |
    | `WEB_PORT` | host port for the web container (default 8080) |
-   | `SESSION_TTL_HOURS` | absolute session lifetime (default 8) |
+   | `JWT_SECRET` | **required**: signs access tokens, at least 32 characters (`openssl rand -base64 48`) |
+   | `ACCESS_TOKEN_TTL_MINUTES` | access token lifetime (default 15) |
+   | `SESSION_TTL_HOURS` | absolute login lifetime = refresh-token lifetime (default 8) |
    | `SEED_PASSWORD` | only for demo data (below) |
    Use alphanumeric passwords (they are embedded in connection URLs). `.env` is git-ignored; never commit it. Compose refuses to start while a required variable is missing.
 2. Start: `docker compose up --build`  →  open **http://localhost:8080**.
@@ -47,8 +49,8 @@ Prerequisites: Docker Engine with the Compose plugin (v2), ~2 GB disk.
    | Backup | `docker compose exec db pg_dump -U postgres timesheets > backup.sql` |
    | Apply new migrations after an upgrade | `docker compose up --build` (the `migrate` service runs `prisma migrate deploy` every start; it is idempotent) |
 
-### HTTPS and cookies
-The backend runs with `NODE_ENV=production`, so the session cookie is `__Host-sid` (Secure, `Path=/`, no `Domain`). Chrome, Edge and Firefox accept Secure cookies on `http://localhost`, so a local demo works over plain HTTP. **Safari and any real hostname require HTTPS**: put a TLS-terminating proxy (or an ingress) in front of the `web` container, keep the app and `/api` on one origin, and set `PUBLIC_ORIGIN` to the public `https://…` URL. The nginx config overwrites `X-Forwarded-For` with the address it sees; if another proxy sits in front, set `TRUST_PROXY` in `docker-compose.yml` to the real number of hops.
+### HTTPS
+Authentication uses bearer tokens (no cookies), so plain HTTP works for a local demo in every browser. A real deployment still needs HTTPS (tokens travel in headers): put a TLS-terminating proxy (or an ingress) in front of the `web` container, keep the app and `/api` on one origin, and set `PUBLIC_ORIGIN` to the public `https://…` URL. The nginx config overwrites `X-Forwarded-For` with the address it sees; if another proxy sits in front, set `TRUST_PROXY` in `docker-compose.yml` to the real number of hops.
 
 ### Two database roles (closes a documented limitation)
 `docker/postgres/init/01-roles.sh` runs once, on first volume creation: it creates `timesheets_owner` (owns the schema, used by `migrate`) and `timesheets_app` (used by the backend) with default privileges `SELECT, INSERT, UPDATE, DELETE` only. Because the app role is **not the table owner** and has no `TRUNCATE`, it cannot `ALTER` tables, `DISABLE TRIGGER` (the period-lock and audit append-only guards) or `TRUNCATE`. Check it after the first start (expected results in comments; the first two were executed on a real Docker stack):
@@ -94,7 +96,7 @@ Prisma migrations in `backend/prisma/migrations/` are the single source of schem
 | Backend: type-check, lint, format, 285 tests | `cd backend && npm run check` | `DATABASE_URL` (tests use the derived `_test` database) |
 | Frontend: type-check, lint, format, 186 tests | `cd frontend && npm run check` | nothing external |
 | End-to-end (30 browser tests) | `cd frontend && npm run e2e` | Google Chrome, free ports 3000/5173, `DATABASE_URL` (uses the derived `_test` database) |
-| End-to-end against a running (e.g. production-like) stack | `E2E_EXTERNAL_SERVERS=1 E2E_BASE_URL=… E2E_COOKIE_NAME=__Host-sid E2E_EXPECT_CSP=1 npm run e2e` | the stack + the derived `_test` database |
+| End-to-end against a running (e.g. production-like) stack | `E2E_EXTERNAL_SERVERS=1 E2E_BASE_URL=… E2E_EXPECT_CSP=1 npm run e2e` | the stack + the derived `_test` database |
 | Live API contract check | `cd frontend && LIVE_PASSWORD=… npm run test:live` | a running backend on a disposable DB |
 | Scripted walkthrough | `BASE_URL=… DEMO_PASSWORD=… scripts/walkthrough.sh` | a running stack with demo users |
 

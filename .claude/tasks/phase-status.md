@@ -42,6 +42,8 @@
 
 - Post-Phase 10 change (owner request, no backlog id): show/hide (eye) toggle on the login password field via a reusable `PasswordField` in `FormControls`; Playwright `getByLabel('Password')` calls made exact because the toggle's label also contains "password". Applied to the login, new-user, reset-password and account (change password) forms; each toggle is named after its field ("Show new password"). Awaiting the owner's review.
 
+- Post-Phase 10 change (ADR 0015, requested by the owner): cookie sessions replaced by bearer tokens — HS256 JWT access token (15 min, claims `sub`+`sid`, re-checked against its `sessions` row on every request) plus a single-use rotating refresh token (the session row, hashed); `POST /api/auth/refresh`; logout takes the refresh token; cookies, `cookie-parser` and the Origin check removed; new dependency `jose`; new required env `JWT_SECRET` (also in `docker-compose.yml`) and `ACCESS_TOKEN_TTL_MINUTES`; frontend keeps tokens in memory only (reload signs out), silent single-flight refresh + replay on 401; e2e now signs in through the UI and navigates with `appGoto`; e2e ports overridable (`E2E_BACKEND_PORT`/`E2E_FRONTEND_PORT`). Awaiting the owner's review.
+
 ## Environment findings
 Node v22.18.0, npm 11.5.2, git 2.34.1, Claude Code 2.1.246, PostgreSQL 14.24 (role `timesheets` and databases `timesheets_dev`/`timesheets_test` created by the owner; connectivity verified), Docker not installed.
 

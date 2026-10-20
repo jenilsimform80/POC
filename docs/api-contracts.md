@@ -35,21 +35,25 @@ Swagger UI: `GET /api-docs`; OpenAPI 3.0 JSON: `GET /api-docs.json` (outside `/a
 - Added in Phase 2 (`backend/tests/health.test.ts`).
 
 ## Authentication (Phase 3)
-Cookie `sid` (HttpOnly, SameSite=Lax, Secure in production) identifies the session. Browsers must send credentials (`fetch(..., { credentials: 'include' })`). State-changing requests from a browser `Origin` that is not in `FRONTEND_URL` get 403.
+Bearer tokens (ADR 0015; replaces the earlier cookie session). `POST /api/auth/login` returns a short-lived JWT `accessToken` and an opaque `refreshToken`; every other protected call sends `Authorization: Bearer <accessToken>`. When it expires (`expiresIn` seconds, default 900) call `POST /api/auth/refresh`. A missing, malformed, expired, forged or revoked token is `401 UNAUTHENTICATED` with `WWW-Authenticate: Bearer`. No cookies are set or read.
 
 ### POST /api/auth/change-password
-Auth: session. Body `{ currentPassword, newPassword (8–128) }`. 204; the user's **other** sessions are deleted, the current one stays. 401 `UNAUTHENTICATED` (wrong current password — counts toward the failed-login rate limit), 422 (new equals current), 400 validation.
+Auth: bearer. Body `{ currentPassword, newPassword (8–128) }`. 204; the user's **other** sessions are deleted; the session of the access token in use stays. 401 `UNAUTHENTICATED` (wrong current password — counts toward the failed-login rate limit), 422 (new equals current), 400 validation.
 
 ### POST /api/auth/login
 - Auth: none. Body: `{ "email": string, "password": string }` (email trimmed and lower-cased; password 1–128 chars).
-- 200: `{ "user": { id, email, name, role, managerId } }` and `Set-Cookie: sid=…`
-- 400 `VALIDATION_ERROR`; 401 `UNAUTHENTICATED` ("Invalid email or password" for unknown email, wrong password and inactive account alike); 429 `RATE_LIMITED` after too many failed attempts from one IP; 403 for a foreign `Origin`.
+- 200: `{ "user": { id, email, name, role, managerId }, "tokenType": "Bearer", "accessToken": string, "expiresIn": seconds, "refreshToken": string, "refreshTokenExpiresAt": ISO date }`
+- 400 `VALIDATION_ERROR`; 401 `UNAUTHENTICATED` ("Invalid email or password" for unknown email, wrong password and inactive account alike); 429 `RATE_LIMITED` after too many failed attempts from one IP.
+
+### POST /api/auth/refresh
+- Auth: none (the refresh token is the credential). Body `{ "refreshToken": string }` (strict). Rotates the token: 200 with the same shape as login (new `accessToken` and `refreshToken`); the old refresh token is dead from then on. The session keeps its original absolute expiry (`SESSION_TTL_HOURS`).
+- 401 `UNAUTHENTICATED` for an unknown, already-used or expired token or a deactivated user; 400 validation; 429 (shares the per-IP attempt cap with login).
 
 ### POST /api/auth/logout
-- Auth: none required (idempotent). Deletes the server-side session and clears the cookie. 204.
+- Auth: none required (idempotent). Body `{ "refreshToken": string }`. Deletes the server-side session: the access token stops working at once too. 204, even for an unknown token.
 
 ### GET /api/auth/me
-- Auth: session. 200 `{ "user": {…} }`; 401 `UNAUTHENTICATED`.
+- Auth: bearer. 200 `{ "user": {…} }`; 401 `UNAUTHENTICATED`.
 
 ## Users (Phase 3 scoping rules; admin user creation added after Phase 10, ADR 0012)
 All routes require a session (401 otherwise). Scope by role:
@@ -215,7 +219,7 @@ Query: `projectId` (uuid), `through` (`YYYY-MM-DD`: count hours up to and includ
 `status`: `OK`; `WARNING` when logged ≥ 80 % of budget; `OVER` when logged > budget (exactly 100 % is `WARNING`, not over). `percentUsed` is `null` for a zero budget (a zero budget with any hours is `OVER`). Projects without hours are included. `remainingHours` may be negative.
 
 # Phase 9 changes to existing contracts
-- **All responses** carry `Cache-Control: no-store` and `Vary: Cookie`; there is no `ETag`.
+- **All responses** carry `Cache-Control: no-store` and `Vary: Authorization`; there is no `ETag`.
 - **NUL characters** (`\u0000`, or `%00` in a URL) anywhere in a request are rejected with 400 `VALIDATION_ERROR` (PostgreSQL cannot store them).
 - **`GET /api/projects` and `GET /api/projects/:id`:** `budgetHours` is **omitted for non-admins** (admins, and the responses of project create/update, include it).
-- **`POST /api/auth/login`:** besides the failed-attempts limit (429 `RATE_LIMITED`, "Too many failed login attempts…"), all attempts per IP are capped (429 `RATE_LIMITED`, "Too many login attempts…"). In production the session cookie is named `__Host-sid` (Secure, `Path=/`, no `Domain`); in development `sid`.
+- **`POST /api/auth/login`:** besides the failed-attempts limit (429 `RATE_LIMITED`, "Too many failed login attempts…"), all attempts per IP are capped (429 `RATE_LIMITED`, "Too many login attempts…"). (Superseded by ADR 0015: there are no cookies any more.)

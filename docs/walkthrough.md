@@ -22,7 +22,7 @@ Sign in as `manager@example.com` → *Approvals* → *Review Casey Contributor*.
 ### 3. Locked-period write rejection through direct API requests
 Sign in as `admin@example.com` → *Locked periods* → lock the month of the entries. As `dev1@example.com` the timesheet now shows "This month is locked for billing" and no edit buttons. **Direct API proof** (the UI is not the boundary): in the browser's developer console, while signed in as `dev1`:
 ```js
-fetch('/api/time-entries', {method: 'POST', credentials: 'include', headers: {'Content-Type': 'application/json'},
+fetch('/api/time-entries', {method: 'POST', headers: {'Content-Type': 'application/json', Authorization: 'Bearer <access token>'},
   body: JSON.stringify({projectId: '<id>', taskId: '<id>', workDate: '<a day in the locked month>', hours: 1, isBillable: true})})
   .then(r => r.json().then(b => console.log(r.status, b)))
 ```
@@ -37,7 +37,7 @@ docker compose exec db psql -U timesheets_app -d timesheets \
 Then *Locked periods* → *Unlock* with a reason (3+ characters is mandatory) → `dev1` can edit again.
 
 ### 4. Authorization failures
-In the browser: `manager@` opening `/periods` or `/reports/budgets` → "You don't have access to this page"; `dev1@` opening `/approvals` likewise (and no *Budget* row on *Projects*: allocated hours are admin-only). Direct API (also scripted): anonymous → `401`; contributor reading another contributor's entry id → `404` (not `403`: ids cannot be probed); contributor, admin or a manager outside the reporting line approving → `403`/`403`/`404`; contributor calling `/api/audit-logs`, `/api/reports/project-budgets` or locking a period → `403`; a write with a foreign `Origin` header and a valid session → `403`.
+In the browser: `manager@` opening `/periods` or `/reports/budgets` → "You don't have access to this page"; `dev1@` opening `/approvals` likewise (and no *Budget* row on *Projects*: allocated hours are admin-only). Direct API (also scripted): anonymous → `401`; contributor reading another contributor's entry id → `404` (not `403`: ids cannot be probed); contributor, admin or a manager outside the reporting line approving → `403`/`403`/`404`; contributor calling `/api/audit-logs`, `/api/reports/project-budgets` or locking a period → `403`; a forged write with a foreign `Origin` header and no bearer token → `401` (there are no cookies to ride on); a used refresh token cannot be used again.
 
 ### 5. Reporting and aggregation
 As `admin@`: *Reports* → From/To covering the demo month → group by *Contributor* + *Project* → *Run report*: total/billable/non-billable hours and entry counts, with a totals row. *Budgets*: `DEMO-1` shows hours logged against the 10 h budget, `%` used and a status (*On track* below 80 %, *Nearly used* from 80 %, *Over budget* above 100 %). As `dev1@` the report only ever contains their own hours. All numbers are computed by PostgreSQL aggregation, not in the browser; the end-to-end suite checks the same figures from four browser time zones.

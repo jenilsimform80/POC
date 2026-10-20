@@ -44,6 +44,8 @@ services:
       DATABASE_URL: postgresql://timesheets_app:${DB_APP_PASSWORD}@db:5432/${DB_NAME:-timesheets}?schema=public
       FRONTEND_URL: ${PUBLIC_ORIGIN:-http://localhost:8080}
       TRUST_PROXY: "1" # exactly one proxy hop: the nginx in the `web` service
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env (openssl rand -base64 48)}
+      ACCESS_TOKEN_TTL_MINUTES: ${ACCESS_TOKEN_TTL_MINUTES:-15}
       SESSION_TTL_HOURS: ${SESSION_TTL_HOURS:-8}
     depends_on:
       db: { condition: service_healthy }

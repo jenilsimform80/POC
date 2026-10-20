@@ -17,7 +17,7 @@ Consequences: trade-offs and follow-ups
 |----|----------|--------|
 | 0001 | [Pin TypeScript to 6.0.x](0001-typescript-version.md) | Accepted |
 | 0002 | [Prisma 7 with pg adapter and dependency overrides](0002-prisma-7-and-dependency-overrides.md) | Accepted |
-| 0003 | [Server-side cookie sessions with argon2id](0003-session-strategy.md) | Accepted |
+| 0003 | [Server-side cookie sessions with argon2id](0003-session-strategy.md) | Accepted (cookie part superseded by 0015) |
 | 0004 | [Timesheet workflow rules and per-user write serialization](0004-timesheet-workflow-rules.md) | Accepted |
 | 0005 | [Period locking: two layers + shared/exclusive advisory lock](0005-period-lock-enforcement.md) | Accepted |
 | 0006 | [Time zone policy: calendar dates are never converted](0006-timezone-policy.md) | Accepted |
@@ -28,6 +28,8 @@ Consequences: trade-offs and follow-ups
 | 0011 | [Delivery topology: Docker Compose, nginx, two database roles](0011-delivery-topology.md) | Accepted (Docker artifacts unexecuted) |
 | 0012 | [Admin-only user administration](0012-admin-user-creation.md) | Accepted |
 | 0013 | [OpenAPI document and Swagger UI](0013-openapi-swagger-ui.md) | Accepted |
+| 0014 | [Restricted projects, task assignment and manager hierarchy](0014-project-access-and-task-assignment.md) | Accepted |
+| 0015 | [Bearer-token authentication (JWT + rotating refresh token)](0015-bearer-token-authentication.md) | Accepted (supersedes cookie part of 0003) |
 
 No further decisions are planned.
 

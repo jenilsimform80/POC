@@ -15,7 +15,7 @@ Honest list as of the end of Phase 9. Nothing here is hidden behind a passing te
 
 ## 3. Delivery (Phase 10)
 - **The Docker artifacts (`docker-compose.yml`, both Dockerfiles, `frontend/nginx/`, `docker/postgres/init/01-roles.sh`) were never executed**: there is no container runtime on the development machine. `docker compose up` is therefore **unverified**. Verified instead: fresh-database migration, the production runtime install and production-mode backend, the full e2e suite and the scripted walkthrough behind a proxy emulator using the real header values, and a clean-copy local setup. The two-role database setup (which closes the trigger-bypass limitation below in the Docker deployment) is written but its SQL has not been run.
-- Over plain HTTP the production `__Host-` Secure cookie works on `localhost` in Chrome/Edge/Firefox but **not in Safari or on real hostnames**; a real deployment needs HTTPS in front of the `web` container.
+- Bearer tokens are kept in browser memory only (ADR 0015): **reloading the page or opening a new tab signs the user out**. A real deployment needs HTTPS in front of the `web` container. Refresh-token reuse is rejected but does not revoke the whole session (no token families).
 - No TLS termination, backups schedule, monitoring or log shipping are provided.
 
 ## 4. Security posture and deployment responsibilities

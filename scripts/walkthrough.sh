@@ -32,19 +32,21 @@ note() { printf '   %s\n' "$*"; }
 pass() { printf '   \033[32m✓\033[0m %s\n' "$*"; }
 fail() { printf '   \033[31m✗ %s\033[0m\n' "$*"; FAILED=1; }
 
-# call ROLE METHOD PATH [JSON]  ->  sets STATUS and BODY. Cookies are kept per role (sent via a header, so
-# the Secure __Host- cookie works over http://localhost too).
+# call ROLE METHOD PATH [JSON]  ->  sets STATUS and BODY. The access token is kept per role and sent as
+# `Authorization: Bearer ...` (there are no cookies).
 call() {
-  local role=$1 method=$2 path=$3 data=${4:-} cookie=""
-  [[ -f "$DIR/$role.cookie" ]] && cookie=$(cat "$DIR/$role.cookie")
-  local args=(-s -o "$DIR/body" -D "$DIR/headers" -w '%{http_code}' -X "$method" "$BASE_URL$path"
-              -H "Origin: $BASE_URL" -H 'Accept: application/json')
-  [[ -n "$cookie" ]] && args+=(-H "Cookie: $cookie")
+  local role=$1 method=$2 path=$3 data=${4:-} token=""
+  [[ -f "$DIR/$role.token" ]] && token=$(cat "$DIR/$role.token")
+  local args=(-s -o "$DIR/body" -w '%{http_code}' -X "$method" "$BASE_URL$path" -H 'Accept: application/json')
+  [[ -n "$token" ]] && args+=(-H "Authorization: Bearer $token")
   [[ -n "$data" ]] && args+=(-H 'Content-Type: application/json' -d "$data")
   STATUS=$(curl "${args[@]}"); BODY=$(cat "$DIR/body")
-  # remember a session cookie if the response sets one (sid / __Host-sid)
-  local set; set=$(grep -i '^set-cookie: \(__Host-\)\?sid=' "$DIR/headers" | head -1 | sed -E 's/^[^:]+: *//; s/;.*//' || true)
-  [[ -n "$set" ]] && echo "$set" > "$DIR/$role.cookie"
+  # remember the access/refresh token if the response carries one (login / refresh)
+  local access refresh
+  access=$(jq -r '.accessToken // empty' <<<"$BODY" 2>/dev/null || true)
+  refresh=$(jq -r '.refreshToken // empty' <<<"$BODY" 2>/dev/null || true)
+  [[ -n "$access" ]] && echo "$access" > "$DIR/$role.token"
+  [[ -n "$refresh" ]] && echo "$refresh" > "$DIR/$role.refresh"
   return 0
 }
 expect() { # expect STATUS "what it proves"
@@ -114,8 +116,11 @@ call other POST "/api/submissions/$SUB/approve" '{}'; expect 404 "a manager outs
 call dev GET /api/audit-logs; expect 403 "audit trail is admin-only"
 call dev GET /api/reports/project-budgets; expect 403 "budget report is admin-only"
 call dev POST /api/locked-periods '{"period":"2041-01"}'; expect 403 "a contributor cannot lock a period"
-STATUS=$(curl -s -o /dev/null -w '%{http_code}' -X POST "$BASE_URL/api/time-entries" -H 'Origin: https://evil.example' -H 'Content-Type: application/json' -H "Cookie: $(cat "$DIR/dev.cookie")" -d '{}'); BODY=""
-expect 403 "a cross-site write (foreign Origin) is refused even with a valid session"
+STATUS=$(curl -s -o /dev/null -w '%{http_code}' -X POST "$BASE_URL/api/time-entries" -H 'Origin: https://evil.example' -H 'Content-Type: application/json' -d '{}'); BODY=""
+expect 401 "a forged cross-site write carries no bearer token, so there is nothing to ride on (no ambient credentials)"
+OLD_REFRESH=$(cat "$DIR/dev.refresh")
+call dev POST /api/auth/refresh "{\"refreshToken\":\"$OLD_REFRESH\"}"; expect 200 "refresh issues a new token pair"
+call anon POST /api/auth/refresh "{\"refreshToken\":\"$OLD_REFRESH\"}"; expect_code 401 UNAUTHENTICATED "the refresh token that was just exchanged cannot be used again (rotation)"
 call dev GET "/api/users"; note "a contributor sees only themself: $(jq -c '[.users[].email]' <<<"$BODY")"
 
 # ---------------------------------------------------------------------------------------------------

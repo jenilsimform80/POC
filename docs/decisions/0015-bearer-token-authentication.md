@@ -1,0 +1,24 @@
+# 0015. Bearer-token authentication (JWT access token + rotating refresh token)
+
+Status: Accepted (added after Phase 10 at the owner's request; awaiting review). Supersedes the cookie part of ADR 0003 and the cookie hardening in ADR 0010 (`__Host-sid`, `Vary: Cookie`, Origin check).
+
+## Context
+Authentication used an HttpOnly session cookie. The owner asked for bearer tokens: `Authorization: Bearer <token>`, a JWT access token plus a refresh token, kept in memory by the frontend.
+
+## Decisions
+- **Access token = short-lived JWT** (HS256, 15 min by default, `ACCESS_TOKEN_TTL_MINUTES`) signed with `JWT_SECRET` (required, at least 32 characters, no default). Claims are only `sub` (user id), `sid` (session id), `iss`, `aud`, `iat`, `exp`: no email, role or other personal data. Verification pins `algorithms: ['HS256']` (blocks `alg: none` and algorithm confusion) and checks issuer, audience and expiry. Library: `jose` (zero dependencies, maintained, standards-based); `cookie-parser` was removed.
+- **Refresh token = the existing `sessions` row.** A random 256-bit token; only its SHA-256 hash is stored (as before). No migration was needed. `SESSION_TTL_HOURS` is now the refresh-token (login) lifetime and is an **absolute** limit: refreshing never extends it.
+- **Rotation.** `POST /api/auth/refresh` swaps the token in one conditional `UPDATE ... WHERE token_hash = old AND expires_at > now RETURNING`, so of two concurrent requests with the same token only one wins, and a replay of the old token fails. Trade-off: no reuse-detection "token family" (a replay is rejected but does not revoke the session); that would need an extra column and was left out as over-engineering for a POC.
+- **The JWT is still checked against its session on every request** (`sid` must exist, be unexpired and belong to `sub`, and the user must be active). That keeps what the cookie design had: logout, password change/reset and deactivation take effect **immediately**, and role/manager changes are always read fresh. The cost is one primary-key lookup per request, which the cookie design paid too. A purely stateless JWT would be cheaper but could not be revoked for up to 15 minutes, which is a poor fit for a system whose point is data integrity. Honest consequence: the JWT adds little over an opaque token here; it was chosen because the owner asked for it.
+- **Logout** takes the refresh token in the body (the access token may already be expired) and deletes the session. `POST /api/auth/change-password` keeps the session of the access token in use and ends the others.
+- **CSRF protection is removed with the cookies.** Browsers do not attach an `Authorization` header on their own, so a cross-site page has nothing to ride on; the Origin allow-list middleware was deleted. CORS stays (without `credentials`). Cache headers now say `Vary: Authorization`.
+- **Frontend stores both tokens in JavaScript memory only** (`src/api/token-store.ts`), never in localStorage/sessionStorage/cookies. The central client sends the bearer header; on a 401 it makes ONE silent refresh (shared by parallel requests, because refresh tokens are single-use) and replays the request; if the refresh is rejected the user is signed out. Consequence for users: **reloading the page or opening a new tab signs you out.** (Persisting the refresh token in sessionStorage would fix that at the price of making it readable by XSS; not chosen.)
+- Login and refresh share the coarse per-IP attempt limiter; failed logins keep the stricter limiter.
+
+## Security trade-offs the owner should know
+- An HttpOnly cookie cannot be read by JavaScript at all; tokens in memory can be used (not stolen later, but used while the tab is open) by any XSS. The strict CSP and React's escaping remain the defence. This is a real step down in XSS resistance in exchange for removing CSRF and ambient credentials, and for API-client friendliness.
+- `JWT_SECRET` is now a high-value secret: whoever has it can mint a token, but the token also needs a live `sessions` row (`sid`), so a leaked secret alone cannot impersonate anyone without a matching session id.
+- Rotating `JWT_SECRET` invalidates all access tokens (refresh tokens still work and mint new ones).
+
+## Verification
+Backend: 359 Vitest tests including forged/unsigned/tampered/expired tokens, malformed headers, refresh rotation, concurrent refresh, absolute expiry, logout and deactivation. Frontend: 238 unit tests including refresh-and-replay, single-flight and no-loop. End-to-end: 30 Playwright tests (UI sign-in; reload signs out; copied tokens die on logout; no cookies).

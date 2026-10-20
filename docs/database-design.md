@@ -24,7 +24,7 @@ users ─┬─< users (manager_id → users.id, "direct reports")
 | approvals | Append-only manager decisions on a submission | FK to submission and manager |
 | locked_periods | Locked calendar months (global); a row = locked, deleting it = unlock (history in audit_logs) | unique `period_start`; CHECK first day of month |
 | audit_logs | Structured trail of workflow actions | indexed by entity, actor, time; **append-only** (trigger `audit_logs_append_only`, SQLSTATE `LK002`) |
-| sessions | Server-side login sessions (Phase 3) | unique `token_hash` (SHA-256 of cookie token); FK to users is `ON DELETE CASCADE` (the one exception to RESTRICT: ephemeral data); indexed by user and expiry |
+| sessions | Server-side login sessions (Phase 3) | unique `token_hash` (SHA-256 of the refresh token; the JWT access token names the row through its `sid` claim; rotated in place on refresh); FK to users is `ON DELETE CASCADE` (the one exception to RESTRICT: ephemeral data); indexed by user and expiry |
 
 ## Decisions
 - **Delete behavior:** every foreign key is `ON DELETE RESTRICT`. Financial and audit data is never cascade-deleted. Users, projects and tasks are retired with `is_active = false` instead of being deleted. Time entries may be deleted by the application only while editable and unlocked (rule enforced in Phase 4/5). Audit logs are never deleted (a DB-level append-only guard is evaluated in Phase 5).
