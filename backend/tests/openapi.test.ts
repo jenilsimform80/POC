@@ -7,7 +7,7 @@ import {
   buildTestApp,
   createTestPrisma,
   createUser,
-  loginCookie,
+  loginToken,
   resetDatabase,
   testEnv,
   TEST_PASSWORD,
@@ -20,7 +20,7 @@ interface Doc {
   components: { schemas: Record<string, Schema>; securitySchemes: Record<string, Schema> };
 }
 
-const doc = buildOpenApiDocument({ cookieName: 'sid' }) as unknown as Doc;
+const doc = buildOpenApiDocument() as unknown as Doc;
 
 // ---------- a tiny response validator (no dependency): the subset of JSON Schema the spec uses ----------
 const FORMATS: Record<string, RegExp> = {
@@ -94,7 +94,7 @@ async function call(
   body?: object,
 ) {
   let req = request(app)[method](`/api${url}`);
-  if (who !== 'anon') req = req.set('Cookie', cookies[who]!);
+  if (who !== 'anon') req = req.set('Authorization', cookies[who]!);
   const res = body ? await req.send(body) : await req.send();
 
   const operation = doc.paths[toOpenApiPath(template)]?.[method];
@@ -121,7 +121,7 @@ beforeAll(async () => {
   const manager = await createUser(prisma, { email: 'manager@t.dev', role: 'MANAGER' });
   await createUser(prisma, { email: 'dev@t.dev', managerId: manager.id });
   for (const who of ['admin', 'manager', 'dev'])
-    cookies[who] = await loginCookie(app, `${who}@t.dev`);
+    cookies[who] = await loginToken(app, `${who}@t.dev`);
 });
 afterAll(async () => {
   await resetDatabase(prisma);
@@ -165,22 +165,20 @@ describe('documentation endpoints', () => {
     expect((await request(off).get('/api-docs.json')).status).toBe(404);
   });
 
-  it('names the real session cookie for each environment', async () => {
-    const dev = (await request(app).get('/api-docs.json')).body as Doc;
-    expect(dev.components.securitySchemes['cookieAuth']).toMatchObject({
-      type: 'apiKey',
-      in: 'cookie',
-      name: 'sid',
+  it('documents bearer JWT authentication', async () => {
+    const body = (await request(app).get('/api-docs.json')).body as Doc;
+    expect(body.components.securitySchemes['bearerAuth']).toMatchObject({
+      type: 'http',
+      scheme: 'bearer',
+      bearerFormat: 'JWT',
     });
-    const prod = buildTestApp(prisma, { NODE_ENV: 'production', API_DOCS_ENABLED: true });
-    const body = (await request(prod).get('/api-docs.json')).body as Doc;
-    expect(body.components.securitySchemes['cookieAuth']).toMatchObject({ name: '__Host-sid' });
   });
 
   it('contains no secrets or environment values', () => {
     const text = JSON.stringify(doc);
     for (const secret of [
       testEnv.DATABASE_URL,
+      testEnv.JWT_SECRET,
       TEST_PASSWORD,
       'postgresql://',
       'password_hash',
@@ -206,11 +204,11 @@ describe('specification structure', () => {
     }
   });
 
-  it('marks every operation as public or cookie-protected', () => {
+  it('marks every operation as public or bearer-protected', () => {
     for (const methods of Object.values(doc.paths)) {
       for (const op of Object.values(methods)) {
         expect(
-          op.security.length === 0 || JSON.stringify(op.security) === '[{"cookieAuth":[]}]',
+          op.security.length === 0 || JSON.stringify(op.security) === '[{"bearerAuth":[]}]',
         ).toBe(true);
       }
     }
@@ -243,7 +241,7 @@ describe('specification structure', () => {
     }
     expect([...registered].filter((r) => !documented.has(r))).toEqual([]); // undocumented routes
     expect([...documented].filter((d) => !registered.has(d))).toEqual([]); // documented but not real
-    expect(registered.size).toBe(35);
+    expect(registered.size).toBe(36);
   });
 });
 
@@ -658,7 +656,25 @@ describe('documented behaviour matches the real API', () => {
         })
       ).status,
     ).toBe(204);
-    expect((await call('anon', 'post', '/auth/logout', '/auth/logout')).status).toBe(204);
+    const session = await call('anon', 'post', '/auth/login', '/auth/login', {
+      email: 'dev@t.dev',
+      password: 'Brand-New-Pass-3',
+    });
+    const refreshToken = (session.body as { refreshToken: string }).refreshToken;
+    const refreshed = await call('anon', 'post', '/auth/refresh', '/auth/refresh', {
+      refreshToken,
+    });
+    expect(refreshed.status).toBe(200);
+    expect(
+      (await call('anon', 'post', '/auth/refresh', '/auth/refresh', { refreshToken })).status,
+    ).toBe(401);
+    expect(
+      (
+        await call('anon', 'post', '/auth/logout', '/auth/logout', {
+          refreshToken: (refreshed.body as { refreshToken: string }).refreshToken,
+        })
+      ).status,
+    ).toBe(204);
   });
 
   it('exercised every documented operation', () => {

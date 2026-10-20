@@ -1,21 +1,49 @@
+import { signAccessToken } from '../auth/access-token.js';
 import { authUserSelect, type AuthUser } from '../auth/auth-user.js';
 import { burnPasswordCheck, verifyPassword } from '../auth/password.js';
-import { createSession, destroySession } from '../auth/session.service.js';
+import {
+  createSession,
+  destroySessionByRefreshToken,
+  rotateRefreshToken,
+} from '../auth/session.service.js';
 import { AppError } from '../errors/app-error.js';
 import type { PrismaClient } from '../generated/prisma/client.js';
 
 const INVALID_CREDENTIALS = () => new AppError('UNAUTHENTICATED', 401, 'Invalid email or password');
+const INVALID_REFRESH = () =>
+  new AppError('UNAUTHENTICATED', 401, 'Invalid or expired refresh token');
 
-export interface LoginResult {
+export interface TokenOptions {
+  jwtSecret: string;
+  accessTokenTtlMinutes: number;
+  sessionTtlHours: number;
+}
+
+export interface TokenSet {
+  accessToken: string;
+  /** Seconds until `accessToken` expires. */
+  expiresIn: number;
+  refreshToken: string;
+  refreshTokenExpiresAt: Date;
+}
+
+export interface LoginResult extends TokenSet {
   user: AuthUser;
-  token: string;
-  expiresAt: Date;
+}
+
+async function issueAccessToken(options: TokenOptions, userId: string, sessionId: string) {
+  const { token, expiresInSeconds } = await signAccessToken(
+    options.jwtSecret,
+    { userId, sessionId },
+    options.accessTokenTtlMinutes,
+  );
+  return { accessToken: token, expiresIn: expiresInSeconds };
 }
 
 export async function login(
   prisma: PrismaClient,
   input: { email: string; password: string },
-  options: { sessionTtlHours: number; previousToken?: string | undefined },
+  options: TokenOptions,
 ): Promise<LoginResult> {
   const record = await prisma.user.findUnique({
     where: { email: input.email },
@@ -30,14 +58,46 @@ export async function login(
   // Same error for wrong password and deactivated account: do not reveal which.
   if (!passwordOk || !record.isActive) throw INVALID_CREDENTIALS();
 
-  // Always issue a fresh token (prevents session fixation); drop the one the client sent.
-  if (options.previousToken) await destroySession(prisma, options.previousToken);
-  const { token, expiresAt } = await createSession(prisma, record.id, options.sessionTtlHours);
+  const session = await createSession(prisma, record.id, options.sessionTtlHours);
+  const access = await issueAccessToken(options, record.id, session.sessionId);
 
   const { id, email, name, role, managerId } = record;
-  return { user: { id, email, name, role, managerId }, token, expiresAt };
+  return {
+    user: { id, email, name, role, managerId },
+    ...access,
+    refreshToken: session.refreshToken,
+    refreshTokenExpiresAt: session.expiresAt,
+  };
 }
 
-export async function logout(prisma: PrismaClient, token: string | undefined): Promise<void> {
-  if (token) await destroySession(prisma, token);
+/** Rotates the refresh token and issues a new access token. The old refresh token stops working. */
+export async function refresh(
+  prisma: PrismaClient,
+  refreshToken: string,
+  options: TokenOptions,
+): Promise<LoginResult> {
+  const rotated = await rotateRefreshToken(prisma, refreshToken);
+  if (!rotated) throw INVALID_REFRESH();
+
+  const user = await prisma.user.findUnique({
+    where: { id: rotated.userId },
+    select: { ...authUserSelect, isActive: true },
+  });
+  if (!user?.isActive) {
+    await destroySessionByRefreshToken(prisma, rotated.refreshToken);
+    throw INVALID_REFRESH();
+  }
+
+  const access = await issueAccessToken(options, user.id, rotated.sessionId);
+  const { id, email, name, role, managerId } = user;
+  return {
+    user: { id, email, name, role, managerId },
+    ...access,
+    refreshToken: rotated.refreshToken,
+    refreshTokenExpiresAt: rotated.expiresAt,
+  };
+}
+
+export async function logout(prisma: PrismaClient, refreshToken: string): Promise<void> {
+  await destroySessionByRefreshToken(prisma, refreshToken);
 }

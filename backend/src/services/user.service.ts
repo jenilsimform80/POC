@@ -1,5 +1,4 @@
 import { hashPassword, verifyPassword } from '../auth/password.js';
-import { hashToken } from '../auth/session.service.js';
 import { AppError } from '../errors/app-error.js';
 import { isUniqueViolation } from '../errors/prisma-errors.js';
 import type { PrismaClient, Role } from '../generated/prisma/client.js';
@@ -172,7 +171,7 @@ export async function resetPassword(prisma: PrismaClient, userId: string, passwo
 export async function changeOwnPassword(
   prisma: PrismaClient,
   userId: string,
-  currentToken: string | undefined,
+  currentSessionId: string | undefined,
   input: { currentPassword: string; newPassword: string },
 ) {
   const record = await prisma.user.findUnique({
@@ -191,7 +190,7 @@ export async function changeOwnPassword(
     await tx.session.deleteMany({
       where: {
         userId,
-        ...(currentToken && { tokenHash: { not: hashToken(currentToken) } }),
+        ...(currentSessionId && { id: { not: currentSessionId } }),
       },
     });
   });

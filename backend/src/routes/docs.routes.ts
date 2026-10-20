@@ -1,6 +1,5 @@
 import type { Express } from 'express';
 import swaggerUi from 'swagger-ui-express';
-import { sessionCookieName } from '../auth/session.service.js';
 import type { Env } from '../config/env.js';
 import { buildOpenApiDocument } from '../docs/openapi.js';
 
@@ -15,7 +14,7 @@ export function apiDocsEnabled(env: Env): boolean {
 export function mountApiDocs(app: Express, env: Env): void {
   if (!apiDocsEnabled(env)) return;
 
-  const document = buildOpenApiDocument({ cookieName: sessionCookieName(env.NODE_ENV) });
+  const document = buildOpenApiDocument();
   app.get(API_DOCS_JSON_PATH, (_req, res) => {
     res.status(200).json(document);
   });

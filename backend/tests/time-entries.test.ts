@@ -6,7 +6,7 @@ import {
   createTestPrisma,
   createUser,
   date,
-  loginCookie,
+  loginToken,
   resetDatabase,
   type ApiErrorBody,
 } from './helpers.js';
@@ -43,7 +43,7 @@ beforeEach(async () => {
   const b = await createProjectWithTask(prisma, { code: 'P2', taskName: 'T2' });
   const cookies: Record<string, string> = {};
   for (const who of ['ma', 'mb', 'dev', 'dev2', 'devb', 'admin']) {
-    cookies[who] = await loginCookie(app, `${who}@t.dev`);
+    cookies[who] = await loginToken(app, `${who}@t.dev`);
   }
   ctx = {
     cookies,
@@ -65,12 +65,12 @@ afterAll(async () => {
 });
 
 const as = (who: string) => ({
-  get: (path: string) => request(app).get(path).set('Cookie', ctx.cookies[who]!),
+  get: (path: string) => request(app).get(path).set('Authorization', ctx.cookies[who]!),
   post: (path: string, body?: object) =>
-    request(app).post(path).set('Cookie', ctx.cookies[who]!).send(body),
+    request(app).post(path).set('Authorization', ctx.cookies[who]!).send(body),
   patch: (path: string, body?: object) =>
-    request(app).patch(path).set('Cookie', ctx.cookies[who]!).send(body),
-  del: (path: string) => request(app).delete(path).set('Cookie', ctx.cookies[who]!),
+    request(app).patch(path).set('Authorization', ctx.cookies[who]!).send(body),
+  del: (path: string) => request(app).delete(path).set('Authorization', ctx.cookies[who]!),
 });
 
 const body = (overrides: Record<string, unknown> = {}) => ({

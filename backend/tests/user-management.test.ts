@@ -4,7 +4,7 @@ import {
   buildTestApp,
   createTestPrisma,
   createUser,
-  loginCookie,
+  loginToken,
   resetDatabase,
   TEST_PASSWORD,
   type ApiErrorBody,
@@ -21,7 +21,7 @@ let n = 0;
 beforeAll(async () => {
   await resetDatabase(prisma);
   adminId = (await createUser(prisma, { email: 'admin@t.dev', role: 'ADMIN' })).id;
-  adminCookie = await loginCookie(app, 'admin@t.dev');
+  adminCookie = await loginToken(app, 'admin@t.dev');
 });
 afterAll(async () => {
   await resetDatabase(prisma);
@@ -36,9 +36,9 @@ const contributor = (managerId: string, over = {}) =>
 
 const asAdmin = {
   patch: (id: string, body: object) =>
-    request(app).patch(`/api/users/${id}`).set('Cookie', adminCookie).send(body),
+    request(app).patch(`/api/users/${id}`).set('Authorization', adminCookie).send(body),
   password: (id: string, body: object) =>
-    request(app).post(`/api/users/${id}/password`).set('Cookie', adminCookie).send(body),
+    request(app).post(`/api/users/${id}/password`).set('Authorization', adminCookie).send(body),
 };
 const code = (res: request.Response) => (res.body as ApiErrorBody).error.code;
 const row = (id: string) => prisma.user.findUniqueOrThrow({ where: { id } });
@@ -47,14 +47,14 @@ describe('PATCH /api/users/:id — who may call it', () => {
   it('rejects anonymous, manager and contributor callers and changes nothing', async () => {
     const m = await manager();
     const c = await contributor(m.id);
-    const mCookie = await loginCookie(app, m.email);
-    const cCookie = await loginCookie(app, c.email);
+    const mCookie = await loginToken(app, m.email);
+    const cCookie = await loginToken(app, c.email);
 
     expect((await request(app).patch(`/api/users/${c.id}`).send({ name: 'X' })).status).toBe(401);
     for (const cookie of [mCookie, cCookie]) {
       const res = await request(app)
         .patch(`/api/users/${c.id}`)
-        .set('Cookie', cookie)
+        .set('Authorization', cookie)
         .send({ name: 'Hacked' });
       expect(res.status).toBe(403);
     }
@@ -199,12 +199,12 @@ describe('deactivating and reactivating', () => {
   it('ends the user’s sessions at once and blocks new logins', async () => {
     const m = await manager();
     const c = await contributor(m.id);
-    const cookie = await loginCookie(app, c.email);
-    expect((await request(app).get('/api/auth/me').set('Cookie', cookie)).status).toBe(200);
+    const cookie = await loginToken(app, c.email);
+    expect((await request(app).get('/api/auth/me').set('Authorization', cookie)).status).toBe(200);
 
     expect((await asAdmin.patch(c.id, { isActive: false })).status).toBe(200);
 
-    expect((await request(app).get('/api/auth/me').set('Cookie', cookie)).status).toBe(401);
+    expect((await request(app).get('/api/auth/me').set('Authorization', cookie)).status).toBe(401);
     expect(await prisma.session.count({ where: { userId: c.id } })).toBe(0);
     const login = await request(app)
       .post('/api/auth/login')
@@ -234,11 +234,11 @@ describe('POST /api/users/:id/password (admin reset)', () => {
   it('rejects non-admins', async () => {
     const m = await manager();
     const c = await contributor(m.id);
-    const cookie = await loginCookie(app, m.email);
+    const cookie = await loginToken(app, m.email);
     expect((await request(app).post(`/api/users/${c.id}/password`).send({})).status).toBe(401);
     const res = await request(app)
       .post(`/api/users/${c.id}/password`)
-      .set('Cookie', cookie)
+      .set('Authorization', cookie)
       .send({ password: NEW_PASSWORD });
     expect(res.status).toBe(403);
   });
@@ -246,11 +246,13 @@ describe('POST /api/users/:id/password (admin reset)', () => {
   it('sets the new password, ends old sessions and stops the old password working', async () => {
     const m = await manager();
     const c = await contributor(m.id);
-    const oldCookie = await loginCookie(app, c.email);
+    const oldCookie = await loginToken(app, c.email);
 
     expect((await asAdmin.password(c.id, { password: NEW_PASSWORD })).status).toBe(204);
 
-    expect((await request(app).get('/api/auth/me').set('Cookie', oldCookie)).status).toBe(401);
+    expect((await request(app).get('/api/auth/me').set('Authorization', oldCookie)).status).toBe(
+      401,
+    );
     const old = await request(app)
       .post('/api/auth/login')
       .send({ email: c.email, password: TEST_PASSWORD });
@@ -276,7 +278,7 @@ describe('POST /api/users/:id/password (admin reset)', () => {
 describe('POST /api/auth/change-password (self)', () => {
   const change = (cookie: string | undefined, body: object) => {
     const req = request(app).post('/api/auth/change-password');
-    return (cookie ? req.set('Cookie', cookie) : req).send(body);
+    return (cookie ? req.set('Authorization', cookie) : req).send(body);
   };
 
   it('requires a session', async () => {
@@ -288,7 +290,7 @@ describe('POST /api/auth/change-password (self)', () => {
 
   it('refuses a wrong current password and leaves the password unchanged', async () => {
     const m = await manager();
-    const cookie = await loginCookie(app, m.email);
+    const cookie = await loginToken(app, m.email);
     const res = await change(cookie, {
       currentPassword: 'wrong-wrong-wrong',
       newPassword: NEW_PASSWORD,
@@ -302,7 +304,7 @@ describe('POST /api/auth/change-password (self)', () => {
 
   it('refuses a weak or unchanged new password', async () => {
     const m = await manager();
-    const cookie = await loginCookie(app, m.email);
+    const cookie = await loginToken(app, m.email);
     expect(
       (await change(cookie, { currentPassword: TEST_PASSWORD, newPassword: 'short' })).status,
     ).toBe(400);
@@ -313,14 +315,16 @@ describe('POST /api/auth/change-password (self)', () => {
 
   it('changes the password, keeps this session and ends the others', async () => {
     const m = await manager();
-    const here = await loginCookie(app, m.email);
-    const elsewhere = await loginCookie(app, m.email);
+    const here = await loginToken(app, m.email);
+    const elsewhere = await loginToken(app, m.email);
 
     const res = await change(here, { currentPassword: TEST_PASSWORD, newPassword: NEW_PASSWORD });
     expect(res.status).toBe(204);
 
-    expect((await request(app).get('/api/auth/me').set('Cookie', here)).status).toBe(200);
-    expect((await request(app).get('/api/auth/me').set('Cookie', elsewhere)).status).toBe(401);
+    expect((await request(app).get('/api/auth/me').set('Authorization', here)).status).toBe(200);
+    expect((await request(app).get('/api/auth/me').set('Authorization', elsewhere)).status).toBe(
+      401,
+    );
     expect(
       (await request(app).post('/api/auth/login').send({ email: m.email, password: TEST_PASSWORD }))
         .status,

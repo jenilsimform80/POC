@@ -11,6 +11,8 @@ export const testEnv: Env = {
   NODE_ENV: 'test',
   PORT: 3000,
   DATABASE_URL: 'postgresql://user:pass@localhost:5432/unused',
+  JWT_SECRET: 'test-only-secret-test-only-secret-0123456789',
+  ACCESS_TOKEN_TTL_MINUTES: 15,
   SESSION_TTL_HOURS: 8,
   TRUST_PROXY: 0,
   // High so suites that log in many times never hit it; the dedicated test builds its own app.
@@ -78,13 +80,12 @@ export async function resetDatabase(prisma: PrismaClient): Promise<void> {
   await prisma.user.deleteMany();
 }
 
-/** Logs in with the shared test password and returns the `sid=...` cookie pair. */
-export async function loginCookie(app: Express, email: string): Promise<string> {
+/** Logs in with the shared test password and returns the `Bearer <access token>` header value. */
+export async function loginToken(app: Express, email: string): Promise<string> {
   const res = await request(app).post('/api/auth/login').send({ email, password: TEST_PASSWORD });
-  const header = res.headers['set-cookie'] as unknown as string[] | undefined;
-  const sid = header?.find((c) => c.startsWith('sid='));
-  if (!sid) throw new Error(`login failed for ${email}: ${res.status}`);
-  return sid.split(';')[0]!;
+  const token = (res.body as { accessToken?: string }).accessToken;
+  if (!token) throw new Error(`login failed for ${email}: ${res.status}`);
+  return `Bearer ${token}`;
 }
 
 export async function createProjectWithTask(

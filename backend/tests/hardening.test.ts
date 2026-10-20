@@ -6,7 +6,7 @@ import {
   createProjectWithTask,
   createTestPrisma,
   createUser,
-  loginCookie,
+  loginToken,
   resetDatabase,
   TEST_PASSWORD,
 } from './helpers.js';
@@ -14,6 +14,7 @@ import {
 // Regression tests for the Phase 9 independent security review.
 const prisma = createTestPrisma();
 const DB = 'postgresql://u:p@localhost:5432/db';
+const SECRET = 'x'.repeat(32);
 
 beforeEach(async () => {
   await resetDatabase(prisma);
@@ -28,78 +29,54 @@ afterAll(async () => {
 });
 
 describe('authenticated responses must not be cached (finding 3)', () => {
-  it('sets no-store and Vary: Cookie on API responses, success and error alike', async () => {
+  it('sets no-store and Vary: Authorization on API responses, success and error alike', async () => {
     const app = buildTestApp(prisma);
-    const cookie = await loginCookie(app, 'admin@t.dev');
+    const cookie = await loginToken(app, 'admin@t.dev');
 
-    const ok = await request(app).get('/api/projects').set('Cookie', cookie);
+    const ok = await request(app).get('/api/projects').set('Authorization', cookie);
     const denied = await request(app).get('/api/projects');
     const notFound = await request(app).get('/api/nope');
 
     for (const res of [ok, denied, notFound]) {
       expect(res.headers['cache-control']).toBe('no-store');
-      expect(String(res.headers['vary'])).toMatch(/Cookie/i);
+      expect(String(res.headers['vary'])).toMatch(/Authorization/i);
     }
     expect(ok.status).toBe(200);
   });
 
   it('does not emit an ETag, so there is no conditional-request cache path either', async () => {
     const app = buildTestApp(prisma);
-    const cookie = await loginCookie(app, 'admin@t.dev');
+    const cookie = await loginToken(app, 'admin@t.dev');
 
-    const res = await request(app).get('/api/projects').set('Cookie', cookie);
+    const res = await request(app).get('/api/projects').set('Authorization', cookie);
 
     expect(res.headers['etag']).toBeUndefined();
   });
 });
 
 describe('fail-safe environment (finding 2)', () => {
-  it('defaults NODE_ENV to production, so a forgotten variable can never weaken cookies', () => {
-    expect(loadEnv({ DATABASE_URL: DB }).NODE_ENV).toBe('production');
+  it('defaults NODE_ENV to production, so a forgotten variable can never weaken the app', () => {
+    expect(loadEnv({ DATABASE_URL: DB, JWT_SECRET: SECRET }).NODE_ENV).toBe('production');
   });
 
-  it('issues a Secure cookie when NODE_ENV is not set explicitly', async () => {
-    const env = loadEnv({ DATABASE_URL: DB });
-    const app = buildTestApp(prisma, { NODE_ENV: env.NODE_ENV });
-
-    const res = await request(app)
-      .post('/api/auth/login')
-      .send({ email: 'dev@t.dev', password: TEST_PASSWORD });
-
-    expect(String(res.headers['set-cookie'])).toMatch(/Secure/i);
+  it('refuses to start without a JWT secret, or with a weak (short) one', () => {
+    expect(() => loadEnv({ DATABASE_URL: DB })).toThrow(/JWT_SECRET/);
+    expect(() => loadEnv({ DATABASE_URL: DB, JWT_SECRET: 'short' })).toThrow(/JWT_SECRET/);
   });
 });
 
-describe('session cookie name (finding 5)', () => {
-  it('uses the __Host- prefix in production (Secure, Path=/, no Domain) and sid otherwise', async () => {
-    const prod = await request(buildTestApp(prisma, { NODE_ENV: 'production' }))
-      .post('/api/auth/login')
-      .send({ email: 'dev@t.dev', password: TEST_PASSWORD });
-    const dev = await request(buildTestApp(prisma, { NODE_ENV: 'development' }))
-      .post('/api/auth/login')
-      .send({ email: 'dev@t.dev', password: TEST_PASSWORD });
-
-    const prodCookie = String((prod.headers['set-cookie'] as unknown as string[])[0]);
-    expect(prodCookie).toMatch(/^__Host-sid=/);
-    expect(prodCookie).toMatch(/Secure/);
-    expect(prodCookie).toMatch(/Path=\//);
-    expect(prodCookie).not.toMatch(/Domain=/i);
-    expect(String((dev.headers['set-cookie'] as unknown as string[])[0])).toMatch(/^sid=/);
-  });
-
-  it('authenticates with the prefixed cookie in production and ignores a plain "sid" cookie there', async () => {
+describe('credentials are not ambient (no cookies)', () => {
+  it('never sets a cookie, and ignores a session cookie sent by a browser', async () => {
     const app = buildTestApp(prisma, { NODE_ENV: 'production' });
     const login = await request(app)
       .post('/api/auth/login')
       .send({ email: 'dev@t.dev', password: TEST_PASSWORD });
-    const pair = String((login.headers['set-cookie'] as unknown as string[])[0]).split(';')[0]!;
-    const token = pair.slice('__Host-sid='.length);
+    const token = (login.body as { accessToken: string }).accessToken;
 
-    const prefixed = await request(app).get('/api/auth/me').set('Cookie', pair);
-    const plain = await request(app).get('/api/auth/me').set('Cookie', `sid=${token}`); // e.g. planted by a sibling subdomain
+    const viaCookie = await request(app).get('/api/auth/me').set('Cookie', `sid=${token}`);
 
-    expect(prefixed.status).toBe(200);
-    expect(plain.status).toBe(401);
+    expect(login.headers['set-cookie']).toBeUndefined();
+    expect(viaCookie.status).toBe(401);
   });
 });
 
@@ -135,9 +112,11 @@ describe('login throttling behind a reverse proxy (finding 1)', () => {
   });
 
   it('rejects a trust proxy value of "true" (client-controlled header would defeat the limiter)', () => {
-    expect(() => loadEnv({ DATABASE_URL: DB, TRUST_PROXY: 'true' })).toThrow(/TRUST_PROXY/);
-    expect(loadEnv({ DATABASE_URL: DB, TRUST_PROXY: '1' }).TRUST_PROXY).toBe(1);
-    expect(loadEnv({ DATABASE_URL: DB }).TRUST_PROXY).toBe(0);
+    expect(() => loadEnv({ DATABASE_URL: DB, JWT_SECRET: SECRET, TRUST_PROXY: 'true' })).toThrow(
+      /TRUST_PROXY/,
+    );
+    expect(loadEnv({ DATABASE_URL: DB, JWT_SECRET: SECRET, TRUST_PROXY: '1' }).TRUST_PROXY).toBe(1);
+    expect(loadEnv({ DATABASE_URL: DB, JWT_SECRET: SECRET }).TRUST_PROXY).toBe(0);
   });
 });
 
@@ -163,21 +142,23 @@ describe('successful logins are bounded too (finding 4)', () => {
 describe('project budgets are admin information (finding 6)', () => {
   it('hides budgetHours from non-admins in the project list and detail, but not from admins', async () => {
     const app = buildTestApp(prisma);
-    const admin = await loginCookie(app, 'admin@t.dev');
-    const dev = await loginCookie(app, 'dev@t.dev');
-    const ma = await loginCookie(app, 'ma@t.dev');
+    const admin = await loginToken(app, 'admin@t.dev');
+    const dev = await loginToken(app, 'dev@t.dev');
+    const ma = await loginToken(app, 'ma@t.dev');
     const id = (await prisma.project.findUniqueOrThrow({ where: { code: 'P1' } })).id;
 
-    const adminList = (await request(app).get('/api/projects').set('Cookie', admin)).body as {
+    const adminList = (await request(app).get('/api/projects').set('Authorization', admin))
+      .body as {
       projects: Record<string, unknown>[];
     };
     expect(adminList.projects[0]).toMatchObject({ budgetHours: 250, code: 'P1' });
 
     for (const cookie of [dev, ma]) {
-      const list = (await request(app).get('/api/projects').set('Cookie', cookie)).body as {
+      const list = (await request(app).get('/api/projects').set('Authorization', cookie)).body as {
         projects: Record<string, unknown>[];
       };
-      const one = (await request(app).get(`/api/projects/${id}`).set('Cookie', cookie)).body as {
+      const one = (await request(app).get(`/api/projects/${id}`).set('Authorization', cookie))
+        .body as {
         project: Record<string, unknown>;
       };
       expect(list.projects[0]).toMatchObject({ code: 'P1', name: 'Project P1' });

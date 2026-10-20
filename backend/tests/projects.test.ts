@@ -5,7 +5,7 @@ import {
   createProjectWithTask,
   createTestPrisma,
   createUser,
-  loginCookie,
+  loginToken,
   resetDatabase,
   type ApiErrorBody,
 } from './helpers.js';
@@ -29,7 +29,7 @@ beforeAll(async () => {
   const manager = await createUser(prisma, { email: 'm@t.dev', role: 'MANAGER' });
   await createUser(prisma, { email: 'admin@t.dev', role: 'ADMIN' });
   await createUser(prisma, { email: 'dev@t.dev', managerId: manager.id });
-  for (const who of ['m', 'admin', 'dev']) cookies[who] = await loginCookie(app, `${who}@t.dev`);
+  for (const who of ['m', 'admin', 'dev']) cookies[who] = await loginToken(app, `${who}@t.dev`);
 });
 afterAll(async () => {
   await resetDatabase(prisma);
@@ -37,11 +37,11 @@ afterAll(async () => {
 });
 
 const as = (who: string) => ({
-  get: (path: string) => request(app).get(path).set('Cookie', cookies[who]!),
+  get: (path: string) => request(app).get(path).set('Authorization', cookies[who]!),
   post: (path: string, body?: object) =>
-    request(app).post(path).set('Cookie', cookies[who]!).send(body),
+    request(app).post(path).set('Authorization', cookies[who]!).send(body),
   patch: (path: string, body?: object) =>
-    request(app).patch(path).set('Cookie', cookies[who]!).send(body),
+    request(app).patch(path).set('Authorization', cookies[who]!).send(body),
 });
 const code = (res: request.Response) => (res.body as ApiErrorBody).error.code;
 

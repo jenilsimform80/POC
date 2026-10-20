@@ -1,39 +1,55 @@
-import type { CookieOptions, RequestHandler } from 'express';
-import { sessionCookieName } from '../auth/session.service.js';
+import type { RequestHandler } from 'express';
 import type { Env } from '../config/env.js';
 import type { PrismaClient } from '../generated/prisma/client.js';
 import { getValidated } from '../middleware/validate.js';
 import { requireAuth } from '../middleware/authorize.js';
-import { login, logout } from '../services/auth.service.js';
+import {
+  login,
+  logout,
+  refresh,
+  type LoginResult,
+  type TokenOptions,
+} from '../services/auth.service.js';
 import { changeOwnPassword } from '../services/user.service.js';
-import type { changePasswordSchemas, loginSchemas } from '../validation/auth.schemas.js';
+import type {
+  changePasswordSchemas,
+  loginSchemas,
+  logoutSchemas,
+  refreshSchemas,
+} from '../validation/auth.schemas.js';
 
-function cookieOptions(env: Env): CookieOptions {
+/** The JSON body of a successful login or refresh. Tokens are returned only here, never logged. */
+function tokenResponse(result: LoginResult) {
   return {
-    httpOnly: true, // not readable from JavaScript (limits XSS impact)
-    sameSite: 'lax', // not sent on cross-site POSTs (CSRF)
-    secure: env.NODE_ENV === 'production', // HTTPS only in production
-    path: '/',
+    user: result.user,
+    tokenType: 'Bearer' as const,
+    accessToken: result.accessToken,
+    expiresIn: result.expiresIn,
+    refreshToken: result.refreshToken,
+    refreshTokenExpiresAt: result.refreshTokenExpiresAt.toISOString(),
   };
 }
 
 export function createAuthController(prisma: PrismaClient, env: Env) {
-  const SESSION_COOKIE = sessionCookieName(env.NODE_ENV);
-  const postLogin: RequestHandler = async (req, res) => {
-    const { body } = getValidated<typeof loginSchemas>(res);
-    const previousToken = (req.cookies as Record<string, unknown> | undefined)?.[SESSION_COOKIE];
-    const result = await login(prisma, body, {
-      sessionTtlHours: env.SESSION_TTL_HOURS,
-      previousToken: typeof previousToken === 'string' ? previousToken : undefined,
-    });
-    res.cookie(SESSION_COOKIE, result.token, { ...cookieOptions(env), expires: result.expiresAt });
-    res.status(200).json({ user: result.user });
+  const tokenOptions: TokenOptions = {
+    jwtSecret: env.JWT_SECRET,
+    accessTokenTtlMinutes: env.ACCESS_TOKEN_TTL_MINUTES,
+    sessionTtlHours: env.SESSION_TTL_HOURS,
   };
 
-  const postLogout: RequestHandler = async (req, res) => {
-    const token = (req.cookies as Record<string, unknown> | undefined)?.[SESSION_COOKIE];
-    await logout(prisma, typeof token === 'string' ? token : undefined);
-    res.clearCookie(SESSION_COOKIE, cookieOptions(env));
+  const postLogin: RequestHandler = async (_req, res) => {
+    const { body } = getValidated<typeof loginSchemas>(res);
+    res.status(200).json(tokenResponse(await login(prisma, body, tokenOptions)));
+  };
+
+  const postRefresh: RequestHandler = async (_req, res) => {
+    const { body } = getValidated<typeof refreshSchemas>(res);
+    res.status(200).json(tokenResponse(await refresh(prisma, body.refreshToken, tokenOptions)));
+  };
+
+  const postLogout: RequestHandler = async (_req, res) => {
+    const { body } = getValidated<typeof logoutSchemas>(res);
+    await logout(prisma, body.refreshToken);
     res.status(204).end();
   };
 
@@ -43,15 +59,9 @@ export function createAuthController(prisma: PrismaClient, env: Env) {
 
   const postChangePassword: RequestHandler = async (req, res) => {
     const { body } = getValidated<typeof changePasswordSchemas>(res);
-    const token = (req.cookies as Record<string, unknown> | undefined)?.[SESSION_COOKIE];
-    await changeOwnPassword(
-      prisma,
-      requireAuth(req).id,
-      typeof token === 'string' ? token : undefined,
-      body,
-    );
+    await changeOwnPassword(prisma, requireAuth(req).id, req.sessionId, body);
     res.status(204).end();
   };
 
-  return { postLogin, postLogout, getMe, postChangePassword };
+  return { postLogin, postRefresh, postLogout, getMe, postChangePassword };
 }

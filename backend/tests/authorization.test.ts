@@ -16,10 +16,9 @@ type Ids = Record<'admin' | 'managerA' | 'managerB' | 'devA1' | 'devA2' | 'devB1
 let ids: Ids;
 const cookies: Record<string, string> = {};
 
-async function loginCookie(email: string): Promise<string> {
+async function loginToken(email: string): Promise<string> {
   const res = await request(app).post('/api/auth/login').send({ email, password: TEST_PASSWORD });
-  const header = res.headers['set-cookie'] as unknown as string[];
-  return header[0]!.split(';')[0]!;
+  return `Bearer ${(res.body as { accessToken: string }).accessToken}`;
 }
 
 beforeAll(async () => {
@@ -39,7 +38,7 @@ beforeAll(async () => {
     devB1: devB1.id,
   };
   for (const email of ['admin', 'ma', 'mb', 'a1', 'a2', 'b1']) {
-    cookies[email] = await loginCookie(`${email}@t.dev`);
+    cookies[email] = await loginToken(`${email}@t.dev`);
   }
 });
 afterAll(async () => {
@@ -49,7 +48,7 @@ afterAll(async () => {
 
 const get = (path: string, who?: string) => {
   const req = request(app).get(path);
-  return who ? req.set('Cookie', cookies[who]!) : req;
+  return who ? req.set('Authorization', cookies[who]!) : req;
 };
 const emailsOf = (res: request.Response) =>
   (res.body as { users: { email: string }[] }).users.map((u) => u.email).sort();

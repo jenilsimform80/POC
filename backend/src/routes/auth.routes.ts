@@ -6,7 +6,12 @@ import { AppError } from '../errors/app-error.js';
 import type { PrismaClient } from '../generated/prisma/client.js';
 import { createAuthenticate } from '../middleware/authenticate.js';
 import { validate } from '../middleware/validate.js';
-import { changePasswordSchemas, loginSchemas } from '../validation/auth.schemas.js';
+import {
+  changePasswordSchemas,
+  loginSchemas,
+  logoutSchemas,
+  refreshSchemas,
+} from '../validation/auth.schemas.js';
 
 export function createAuthRouter(prisma: PrismaClient, env: Env): Router {
   const router = Router();
@@ -37,7 +42,10 @@ export function createAuthRouter(prisma: PrismaClient, env: Env): Router {
   });
 
   router.post('/login', attemptLimiter, loginLimiter, validate(loginSchemas), controller.postLogin);
-  router.post('/logout', controller.postLogout);
+  // Refresh and logout take the refresh token in the body (the access token may already be expired).
+  // Refresh is throttled by the coarse limiter too: it is a credential exchange.
+  router.post('/refresh', attemptLimiter, validate(refreshSchemas), controller.postRefresh);
+  router.post('/logout', validate(logoutSchemas), controller.postLogout);
   router.get('/me', createAuthenticate(prisma), controller.getMe);
   // Wrong current passwords count toward the same failed-attempt limit as logins.
   router.post(

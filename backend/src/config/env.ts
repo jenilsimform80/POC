@@ -1,8 +1,8 @@
 import { z } from 'zod';
 
 const envSchema = z.object({
-  // Fail-safe default: if NODE_ENV is forgotten the app behaves as production (Secure __Host- cookie,
-  // error logging on), never as a weaker development mode. Local dev sets NODE_ENV=development in .env.
+  // Fail-safe default: if NODE_ENV is forgotten the app behaves as production (production-only
+  // behaviour such as error logging on), never as a weaker development mode. Local dev sets NODE_ENV=development in .env.
   NODE_ENV: z.enum(['development', 'test', 'production']).default('production'),
   PORT: z.coerce.number().int().min(1).max(65535).default(3000),
   DATABASE_URL: z.string().regex(/^postgres(ql)?:\/\//, 'must be a PostgreSQL connection URL'),
@@ -14,6 +14,17 @@ const envSchema = z.object({
     .regex(/^\d+$/, 'must be a whole number of proxy hops (0, 1, 2...), not "true"')
     .default('0')
     .transform(Number),
+  // HMAC key that signs access tokens (JWT, HS256). No default on purpose: a guessable secret would let
+  // anyone forge a token for any user. Generate with `openssl rand -base64 48`.
+  JWT_SECRET: z.string().min(32, 'must be at least 32 characters'),
+  // Short-lived: a stolen access token is only useful for this long (it is also re-checked against
+  // its session row on every request, so logout/deactivation still take effect immediately).
+  ACCESS_TOKEN_TTL_MINUTES: z.coerce
+    .number()
+    .positive()
+    .max(24 * 60)
+    .default(15),
+  // Lifetime of the refresh token (= the login session): the absolute time before signing in again.
   SESSION_TTL_HOURS: z.coerce
     .number()
     .positive()

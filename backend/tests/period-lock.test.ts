@@ -7,7 +7,7 @@ import {
   createTestPrisma,
   createUser,
   date,
-  loginCookie,
+  loginToken,
   resetDatabase,
   type ApiErrorBody,
 } from './helpers.js';
@@ -37,7 +37,7 @@ beforeEach(async () => {
   ids = { admin: admin.id, ma: ma.id, mb: mb.id, dev: dev.id, dev2: dev2.id };
   cookies = {} as Record<Who, string>;
   for (const who of ['admin', 'ma', 'dev', 'dev2', 'mb'] as const) {
-    cookies[who] = await loginCookie(app, `${who}@t.dev`);
+    cookies[who] = await loginToken(app, `${who}@t.dev`);
   }
 });
 afterAll(async () => {
@@ -46,12 +46,12 @@ afterAll(async () => {
 });
 
 const as = (who: Who) => ({
-  get: (path: string) => request(app).get(path).set('Cookie', cookies[who]),
+  get: (path: string) => request(app).get(path).set('Authorization', cookies[who]),
   post: (path: string, body?: object) =>
-    request(app).post(path).set('Cookie', cookies[who]).send(body),
+    request(app).post(path).set('Authorization', cookies[who]).send(body),
   patch: (path: string, body?: object) =>
-    request(app).patch(path).set('Cookie', cookies[who]).send(body),
-  del: (path: string) => request(app).delete(path).set('Cookie', cookies[who]),
+    request(app).patch(path).set('Authorization', cookies[who]).send(body),
+  del: (path: string) => request(app).delete(path).set('Authorization', cookies[who]),
 });
 const errorOf = (res: request.Response) => (res.body as ApiErrorBody).error;
 const lock = (period: string, who: Who = 'admin', note?: string) =>
@@ -442,7 +442,7 @@ describe('concurrency: a lock racing an edit never lets a change land after the 
       await createUser(prisma, { email: 'x2@t.dev', managerId: ids.ma }),
     ];
     const writers: Who[] = ['dev', 'dev2'];
-    const extraCookies = await Promise.all(extra.map((u) => loginCookie(app, u.email)));
+    const extraCookies = await Promise.all(extra.map((u) => loginToken(app, u.email)));
 
     for (let round = 1; round <= 8; round++) {
       const month = String(round).padStart(2, '0');
@@ -457,7 +457,7 @@ describe('concurrency: a lock racing an edit never lets a change land after the 
         };
         for (const who of writers) writes.push(as(who).post('/api/time-entries', body));
         for (const c of extraCookies)
-          writes.push(request(app).post('/api/time-entries').set('Cookie', c).send(body));
+          writes.push(request(app).post('/api/time-entries').set('Authorization', c).send(body));
       }
 
       const [lockResponse, ...results] = await Promise.all([lock(period), ...writes]);

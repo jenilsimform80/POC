@@ -7,7 +7,7 @@ import {
   createProjectWithTask,
   createTestPrisma,
   createUser,
-  loginCookie,
+  loginToken,
   resetDatabase,
   type ApiErrorBody,
 } from './helpers.js';
@@ -33,7 +33,7 @@ beforeEach(async () => {
   ids = { admin: admin.id, ma: ma.id, mb: mb.id, dev: dev.id, dev2: dev2.id };
   cookies = {} as Record<Who, string>;
   for (const who of ['admin', 'ma', 'mb', 'dev', 'dev2'] as const) {
-    cookies[who] = await loginCookie(app, `${who}@t.dev`);
+    cookies[who] = await loginToken(app, `${who}@t.dev`);
   }
 });
 afterAll(async () => {
@@ -42,11 +42,11 @@ afterAll(async () => {
 });
 
 const as = (who: Who) => ({
-  get: (path: string) => request(app).get(path).set('Cookie', cookies[who]),
+  get: (path: string) => request(app).get(path).set('Authorization', cookies[who]),
   post: (path: string, body?: object) =>
-    request(app).post(path).set('Cookie', cookies[who]).send(body),
+    request(app).post(path).set('Authorization', cookies[who]).send(body),
   patch: (path: string, body?: object) =>
-    request(app).patch(path).set('Cookie', cookies[who]).send(body),
+    request(app).patch(path).set('Authorization', cookies[who]).send(body),
 });
 const errorOf = (res: request.Response) => (res.body as ApiErrorBody).error;
 

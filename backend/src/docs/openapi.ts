@@ -2,11 +2,6 @@ import { componentSchemas, ref } from './components.js';
 import { operations, type Access, type OperationSpec } from './operations.js';
 import { fromZod, parametersFrom, type Json } from './schema-utils.js';
 
-export interface OpenApiOptions {
-  /** Session cookie name: `sid`, or `__Host-sid` in production. */
-  cookieName: string;
-}
-
 /** Express `/projects/:id/tasks/:taskId` -> OpenAPI `/projects/{id}/tasks/{taskId}`. */
 export const toOpenApiPath = (path: string): string => path.replace(/:([A-Za-z]+)/g, '{$1}');
 
@@ -62,7 +57,8 @@ function buildOperation(op: OperationSpec): Json {
 
   const errors: Record<number, string> = {};
   if (request) errors[400] = 'Validation failed (`details` lists `{location, path, message}`).';
-  if (op.access !== 'public') errors[401] = 'No valid session (`UNAUTHENTICATED`).';
+  if (op.access !== 'public')
+    errors[401] = 'Missing, invalid or expired bearer token (`UNAUTHENTICATED`).';
   if (op.access === 'MANAGER' || op.access === 'ADMIN' || op.access === 'ADMIN_OR_MANAGER') {
     errors[403] = 'Your role is not allowed to do this (`FORBIDDEN`).';
   }
@@ -75,7 +71,7 @@ function buildOperation(op: OperationSpec): Json {
     tags: [op.tag],
     summary: op.summary,
     description: [ACCESS_TEXT[op.access], op.description].filter(Boolean).join('\n\n'),
-    security: op.access === 'public' ? [] : [{ cookieAuth: [] }],
+    security: op.access === 'public' ? [] : [{ bearerAuth: [] }],
     ...(parameters.length > 0 && { parameters }),
     ...(request?.body && {
       requestBody: {
@@ -87,8 +83,8 @@ function buildOperation(op: OperationSpec): Json {
   };
 }
 
-/** Builds the OpenAPI 3.0 document. Pure: no I/O, no secrets, nothing environment-specific but the cookie name. */
-export function buildOpenApiDocument(options: OpenApiOptions): Json {
+/** Builds the OpenAPI 3.0 document. Pure: no I/O, no secrets, nothing environment-specific. */
+export function buildOpenApiDocument(): Json {
   const paths: Record<string, Json> = {};
   for (const op of operations) {
     const key = toOpenApiPath(op.path);
@@ -105,9 +101,7 @@ export function buildOpenApiDocument(options: OpenApiOptions): Json {
       description: [
         'REST API for logging hours, weekly submission and approval, billing-period locking and reports.',
         '',
-        '**Authentication.** Cookie session. Call `POST /auth/login`; the server sets an HttpOnly cookie and your browser sends it on later calls. Swagger UI cannot set a `Cookie` header itself, so the *Authorize* button is informational — just log in with *Try it out*.',
-        '',
-        "**Trying write calls from this page.** State-changing requests from a browser must come from an allow-listed origin (`FRONTEND_URL`). Add this page's own origin (e.g. `http://localhost:3000`) to `FRONTEND_URL` in `backend/.env`, restart, then log in here.",
+        '**Authentication.** Bearer tokens. Call `POST /auth/login` to get a short-lived JWT `accessToken` and a `refreshToken`. Send `Authorization: Bearer <accessToken>` on every other call (paste the access token into *Authorize*). When it expires (`expiresIn` seconds), call `POST /auth/refresh` with the refresh token; that returns a new pair and the old refresh token stops working. `POST /auth/logout` ends the session.',
         '',
         '**Errors.** Every error is `{ "error": { "code", "message", "details"? } }`. Any endpoint can also return 413/415 (oversized or unsupported body), 500 (generic, no internals) or 503 (transient database condition; safe to retry).',
         '',
@@ -120,12 +114,12 @@ export function buildOpenApiDocument(options: OpenApiOptions): Json {
     components: {
       schemas: componentSchemas,
       securitySchemes: {
-        cookieAuth: {
-          type: 'apiKey',
-          in: 'cookie',
-          name: options.cookieName,
+        bearerAuth: {
+          type: 'http',
+          scheme: 'bearer',
+          bearerFormat: 'JWT',
           description:
-            'Session cookie set by `POST /auth/login` (HttpOnly, SameSite=Lax; Secure and `__Host-` prefixed in production).',
+            'Short-lived access token from `POST /auth/login` or `POST /auth/refresh`. Also checked against its server-side session on every request, so logout and deactivation take effect immediately.',
         },
       },
     },
