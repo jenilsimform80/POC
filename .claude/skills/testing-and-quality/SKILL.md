@@ -1,6 +1,6 @@
 ---
 name: testing-and-quality
-description: Testing approach and quality gates for this POC — unit, integration, negative and concurrency tests, coverage expectations and the lint/type-check/test gates. Use when writing tests or deciding if a task is done.
+description: Testing approach and quality gates for Timesheets and Project Billing — unit, integration, negative and concurrency tests, coverage expectations and the lint/type-check/test gates. Use when writing tests or deciding if a task is done.
 ---
 
 # Testing and quality

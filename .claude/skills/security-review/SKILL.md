@@ -1,6 +1,6 @@
 ---
 name: security-review
-description: Security checklist for this POC — authentication, role and ownership authorization, IDOR prevention, input validation and period-lock enforcement. Use when reviewing or writing anything that touches auth, permissions or write paths.
+description: Security checklist for Timesheets and Project Billing — authentication, role and ownership authorization, IDOR prevention, input validation and period-lock enforcement. Use when reviewing or writing anything that touches auth, permissions or write paths.
 ---
 
 # Security review

@@ -1,6 +1,6 @@
 ---
 name: database-and-prisma
-description: Prisma schema, migration, index, transaction and PostgreSQL guidance for this POC. Use when changing the schema, writing queries, or reasoning about data integrity and locking.
+description: Prisma schema, migration, index, transaction and PostgreSQL guidance for Timesheets and Project Billing. Use when changing the schema, writing queries, or reasoning about data integrity and locking.
 ---
 
 # Database and Prisma

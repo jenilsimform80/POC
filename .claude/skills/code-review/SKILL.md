@@ -1,6 +1,6 @@
 ---
 name: code-review
-description: Project code-review checklist for this POC — correctness, maintainability, security, performance, regressions and missing tests. Use when reviewing a diff without modifying it.
+description: Project code-review checklist for Timesheets and Project Billing — correctness, maintainability, security, performance, regressions and missing tests. Use when reviewing a diff without modifying it.
 ---
 
 # Code review

@@ -1,6 +1,6 @@
-# Timesheets and Project Billing — POC
+# Timesheets and Project Billing
 
-Full-stack POC: contributors log hours against projects/tasks, submit weekly timesheets, managers approve/reject, finance/admin lock billing periods, reports show hours and budget usage. **Core challenge: period locking and data integrity** — locked periods must be immutable via every write path (UI, API, and ideally the database).
+Full-stack app: contributors log hours against projects/tasks, submit weekly timesheets, managers approve/reject, finance/admin lock billing periods, reports show hours and budget usage. **Core challenge: period locking and data integrity** — locked periods must be immutable via every write path (UI, API, and ideally the database).
 
 The owner is learning: explain significant decisions and trade-offs, and challenge unsafe or over-complicated approaches.
 

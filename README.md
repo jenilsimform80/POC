@@ -1,4 +1,4 @@
-# Timesheets and Project Billing (POC)
+# Timesheets and Project Billing
 
 Contributors log daily hours (billable or not) against projects and tasks and submit weekly timesheets; managers approve or reject their direct reports' weeks; finance/admin lock billing months so billed hours can never change; reports show hours by contributor, project and month and compare logged hours with each project's budget; important actions land in an append-only audit trail.
 

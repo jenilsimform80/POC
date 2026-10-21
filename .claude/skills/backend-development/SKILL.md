@@ -1,6 +1,6 @@
 ---
 name: backend-development
-description: Express + TypeScript backend conventions for this POC — routes, controllers, services, middleware, Zod validation and error handling. Use when adding or changing backend endpoints.
+description: Express + TypeScript backend conventions for Timesheets and Project Billing — routes, controllers, services, middleware, Zod validation and error handling. Use when adding or changing backend endpoints.
 ---
 
 # Backend development
