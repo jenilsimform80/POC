@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Runnable POC walkthrough: demonstrates the six required scenarios against a RUNNING stack through the
+# Runnable walkthrough: demonstrates the six required scenarios against a RUNNING stack through the
 # public HTTP API and ASSERTS every expected outcome (exits non-zero on the first mismatch).
 #
 #   BASE_URL=http://localhost:8080 DEMO_PASSWORD='<the demo seed password>' scripts/walkthrough.sh

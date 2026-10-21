@@ -1,4 +1,4 @@
-# POC walkthrough
+# Timesheets and Project Billing walkthrough
 
 About 15 minutes. It demonstrates the six required scenarios, first by **script** (fast, asserts every outcome) and then by **UI** (what a reviewer clicks). Prerequisite: a running stack with the demo users (`docs/deployment.md`).
 
