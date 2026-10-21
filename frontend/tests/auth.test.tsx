@@ -11,6 +11,7 @@ import {
   dbUp,
   fail,
   healthOk,
+  dashboardApi,
   mockApi,
   noContent,
   ok,
@@ -223,7 +224,11 @@ describe('role-aware navigation (a convenience; the backend enforces access)', (
 
 describe('sign out and expired sessions', () => {
   it('signs out: calls the API, clears the user and goes back to the login page', async () => {
-    const api = mockApi({ ...signedInAs(users.contributor), 'POST /auth/logout': noContent() });
+    const api = mockApi({
+      ...signedInAs(users.contributor),
+      ...dashboardApi(),
+      'POST /auth/logout': noContent(),
+    });
     renderRoutes('/');
     await screen.findByRole('heading', { name: /Welcome/ });
 
@@ -281,6 +286,7 @@ describe('sign out and expired sessions', () => {
   it('stays signed in and says so when the server could not end the session', async () => {
     mockApi({
       ...signedInAs(users.contributor),
+      ...dashboardApi(),
       'POST /auth/logout': fail(500, 'INTERNAL_ERROR', 'An unexpected error occurred'),
     });
     renderRoutes('/');

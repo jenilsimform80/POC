@@ -2,7 +2,7 @@ import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { routes } from '../src/routes';
-import { dbUp, healthOk, mockApi, renderRoutes, signedInAs, users } from './helpers';
+import { dashboardApi, dbUp, healthOk, mockApi, renderRoutes, signedInAs, users } from './helpers';
 
 describe('routing', () => {
   it('renders the home page for a signed-in user', async () => {
@@ -37,6 +37,7 @@ describe('routing', () => {
   it('navigates with the nav links and marks the active one', async () => {
     mockApi({
       ...signedInAs(users.contributor),
+      ...dashboardApi(),
       'GET /health': healthOk(),
       'GET /health/db': dbUp(),
     });

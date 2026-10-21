@@ -4,6 +4,7 @@ import { createMemoryRouter, RouterProvider, type RouteObject } from 'react-rout
 import type { Project, TimeEntry, User, WeekSummary } from '../src/api/types';
 import { setTokens } from '../src/api/token-store';
 import { routes } from '../src/routes';
+import { mondayOf, todayIso } from '../src/lib/dates';
 
 // ---------- responses ----------
 export function jsonResponse(body: unknown, status = 200): Response {
@@ -213,3 +214,24 @@ export const week = (overrides: Partial<WeekSummary> = {}): WeekSummary => {
     ...overrides,
   };
 };
+
+/** Empty-but-valid responses for everything the home dashboard loads (spread into mockApi). */
+export const dashboardApi = (): Record<string, Responder> => ({
+  'GET /timesheets/:weekStart': () => ok(week({ weekStart: mondayOf(todayIso()) })),
+  'GET /reports/hours': () =>
+    ok({
+      from: '2026-01-01',
+      to: '2026-12-31',
+      groupBy: [],
+      rows: [],
+      totals: { totalHours: 0, billableHours: 0, nonBillableHours: 0, entryCount: 0 },
+      truncated: false,
+    }),
+  'GET /submissions': ok({ submissions: [] }),
+  'GET /users/direct-reports': ok({ users: [] }),
+  'GET /reports/project-budgets': ok({
+    through: null,
+    projects: [],
+    totals: { budgetHours: 0, loggedHours: 0 },
+  }),
+});

@@ -10,6 +10,7 @@ import {
   LockIcon,
   WalletIcon,
 } from '../components/layout/icons';
+import { Dashboard } from '../features/dashboard/Dashboard';
 import styles from './HomePage.module.css';
 
 interface Shortcut {
@@ -73,6 +74,8 @@ export function HomePage() {
           Log hours against projects, submit your weekly timesheet, and see where the hours go.
         </p>
       </div>
+      <Dashboard />
+      <h2 className={styles.quickLinks}>Quick links</h2>
       <ul className={styles.grid}>
         {SHORTCUTS.filter((s) => !s.area || canAccess(user.role, s.area)).map((s) => (
           <li key={s.to}>

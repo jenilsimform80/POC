@@ -1,0 +1,220 @@
+.dashboard {
+  display: grid;
+  gap: 1.25rem;
+}
+.kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.kpi {
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+}
+.kpiLabel {
+  display: block;
+  color: var(--color-text-muted);
+  font-size: 0.82rem;
+}
+.kpiValue {
+  display: block;
+  margin-top: 0.2rem;
+  font-size: 1.75rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+.kpiValue small {
+  margin-left: 0.2rem;
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+.kpiHint {
+  display: block;
+  margin-top: 0.15rem;
+  color: var(--color-text-muted);
+  font-size: 0.8rem;
+}
+.panels {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 24rem), 1fr));
+  gap: 1rem;
+}
+.panel {
+  min-width: 0;
+  padding: 1.1rem 1.2rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+}
+.panel h2 {
+  margin: 0 0 0.15rem;
+  font-size: 1rem;
+}
+.panelSub {
+  margin: 0 0 1rem;
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+}
+.panelFooter {
+  margin: 1rem 0 0;
+  font-size: 0.88rem;
+}
+.legend {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0 0 0.75rem;
+  color: var(--color-text-muted);
+  font-size: 0.8rem;
+}
+.legend span {
+  margin-left: 0.5rem;
+}
+.legend span:first-child {
+  margin-left: 0;
+}
+.swatchBillable,
+.swatchNonBillable {
+  display: inline-block;
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 3px;
+}
+.swatchBillable,
+.segBillable {
+  background: var(--color-accent);
+}
+.swatchNonBillable,
+.segNonBillable {
+  background: var(--color-border-strong);
+}
+.segBillable,
+.segNonBillable {
+  display: block;
+  min-height: 0;
+  min-width: 0;
+}
+
+/* column chart */
+.columns {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  gap: 0.5rem;
+  height: 12rem;
+}
+.column {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  min-width: 0;
+}
+.columnValue {
+  min-height: 1rem;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+.columnTrack {
+  display: flex;
+  flex: 1;
+  align-items: flex-end;
+  width: 100%;
+  border-radius: 6px;
+  background: var(--color-surface-alt);
+}
+.columnStack {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  overflow: hidden;
+  border-radius: 6px;
+}
+.columnStack .segBillable,
+.columnStack .segNonBillable {
+  flex-basis: 0;
+}
+.columnLabel {
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+}
+
+/* ranked bars */
+.ranked {
+  display: grid;
+  gap: 0.85rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.rankedHead {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  font-size: 0.9rem;
+}
+.rankedTrack {
+  height: 0.55rem;
+  margin-top: 0.3rem;
+  border-radius: 999px;
+  background: var(--color-surface-alt);
+  overflow: hidden;
+}
+.rankedFill {
+  display: flex;
+  height: 100%;
+}
+.rankedFill .segBillable,
+.rankedFill .segNonBillable {
+  flex-basis: 0;
+}
+
+/* progress */
+.progressTrack {
+  height: 0.55rem;
+  margin-top: 0.3rem;
+  border-radius: 999px;
+  background: var(--color-surface-alt);
+  overflow: hidden;
+}
+.progressFill {
+  height: 100%;
+  border-radius: 999px;
+}
+.progress_ok {
+  background: var(--color-success);
+}
+.progress_warning {
+  background: var(--color-warning);
+}
+.progress_over {
+  background: var(--color-danger);
+}
+
+/* lists */
+.list {
+  display: grid;
+  gap: 0.6rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.listItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  font-size: 0.9rem;
+}
+.sectionTitle {
+  margin: 0.5rem 0 0;
+  font-size: 1rem;
+}
