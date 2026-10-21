@@ -66,6 +66,8 @@ function ReviewContent({ review, onDecided }: { review: Review; onDecided: () =>
   const lookup = createProjectLookup(projects);
   const byDay = new Map<string, typeof week.entries>();
   for (const e of week.entries) byDay.set(e.workDate, [...(byDay.get(e.workDate) ?? []), e]);
+  // Reviewers only need days with logged time; empty weekdays and unworked weekends are noise.
+  const workedDays = weekDays(week.weekStart).filter((date) => byDay.has(date));
 
   return (
     <div className="stack">
@@ -93,7 +95,8 @@ function ReviewContent({ review, onDecided }: { review: Review; onDecided: () =>
       )}
 
       <div className="stack">
-        {weekDays(week.weekStart).map((date) => (
+        {workedDays.length === 0 && <p className="muted">No time logged this week.</p>}
+        {workedDays.map((date) => (
           <DaySection
             key={date}
             date={date}
