@@ -1,3 +1,27 @@
+/* page header */
+.pageHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1.5rem;
+  margin: 0 0 1.25rem;
+}
+.pageHeader h1 {
+  margin: 0;
+}
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1.25rem;
+}
+.small {
+  padding: 0.3rem 0.7rem;
+  font-size: 0.82rem;
+  box-shadow: none;
+}
+
 .card {
   padding: 1rem;
   border: 1px solid var(--color-border);
@@ -5,6 +29,7 @@
   background: var(--color-surface);
   box-shadow: var(--shadow-sm);
   margin: 0.75rem 0;
+  padding: 1.25rem 1.4rem;
 }
 .cardHeader {
   display: flex;
@@ -13,22 +38,39 @@
 }
 .cardHeader h2 {
   margin: 0;
-  font-size: 1.1rem;
+  font-size: 1.15rem;
+}
+.projectActions {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.25rem;
 }
 .facts {
   display: grid;
-  grid-template-columns: max-content 1fr;
-  gap: 0.25rem 1rem;
-  margin: 0.75rem 0;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, max-content));
+  gap: 0.5rem 2rem;
+  margin: 0.9rem 0;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius);
+  background: var(--color-surface-alt);
 }
 .facts dt {
   color: var(--color-text-muted);
+  font-size: 0.75rem;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 .facts dd {
-  margin: 0;
+  margin: 0 0 0.35rem;
+  font-weight: 550;
 }
 .taskHeading {
-  margin: 0.75rem 0 0.25rem;
+  margin: 1.1rem 0 0.4rem;
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
 }
 .tasks {
   list-style: none;
@@ -40,21 +82,85 @@
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 0.5rem;
-  padding: 0.35rem 0;
+  gap: 0.5rem 1rem;
+  padding: 0.6rem 0.5rem;
+  margin: 0 -0.5rem;
   border-top: 1px solid var(--color-border);
+  border-radius: var(--radius);
+}
+.task:hover {
+  background: var(--color-surface-alt);
+}
+.taskInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+  flex: 1 1 14rem;
+}
+.taskName {
+  font-weight: 550;
+}
+.assignPanel {
+  flex-basis: 100%;
+  padding: 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+}
+.addTask {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.75rem;
+  margin-top: 0.9rem;
+  padding: 0.9rem;
+  border: 1px dashed var(--color-border-strong);
+  border-radius: var(--radius);
+  background: var(--color-surface-alt);
+}
+.addTask > :first-child {
+  flex: 1 1 14rem;
+}
+.addTask input {
+  width: 100%;
+}
+.assignDetails {
+  align-self: center;
+  flex-basis: 100%;
+  order: 3;
+}
+.assignDetails summary {
+  cursor: pointer;
+  color: var(--color-accent);
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+.assignDetails fieldset {
+  margin-top: 0.5rem;
 }
 .taskActions {
   display: inline-flex;
   gap: 0.5rem;
 }
 .checklist {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 18rem), 1fr));
+  gap: 0.4rem 1.25rem;
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-md, 0.5rem);
-  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  padding: 0.6rem 0.9rem 0.75rem;
   margin: 0;
   max-height: 14rem;
   overflow: auto;
+}
+.checklist legend {
+  font-size: 0.85rem;
+}
+.checklist > p {
+  grid-column: 1 / -1;
+  margin: 0;
 }
 .checklist legend {
   padding: 0 0.25rem;

@@ -54,18 +54,20 @@ export function ProjectsPage() {
 
   return (
     <>
-      <h1>Projects</h1>
-      <div className="row">
-        {isAdmin && (
-          <>
-            <CheckboxField
-              label="Show archived projects"
-              checked={includeArchived}
-              onChange={(e) => setIncludeArchived(e.target.checked)}
-            />
-            {!creating && <Button onClick={() => setCreating(true)}>New project</Button>}
-          </>
-        )}
+      <div className={styles.pageHeader}>
+        <h1>Projects</h1>
+        <div className={styles.toolbar}>
+          {isAdmin && (
+            <>
+              <CheckboxField
+                label="Show archived projects"
+                checked={includeArchived}
+                onChange={(e) => setIncludeArchived(e.target.checked)}
+              />
+              {!creating && <Button onClick={() => setCreating(true)}>New project</Button>}
+            </>
+          )}
+        </div>
       </div>
 
       {creating && isAdmin && (
@@ -180,9 +182,10 @@ function ProjectCard({
             )}
           </dl>
           {isAdmin && (
-            <div className="row">
+            <div className={styles.projectActions}>
               <Button
                 variant="secondary"
+                className={styles.small}
                 onClick={() => setEditing(true)}
                 aria-label={`Edit project ${project.code}`}
               >
@@ -190,6 +193,7 @@ function ProjectCard({
               </Button>
               <Button
                 variant="secondary"
+                className={styles.small}
                 disabled={toggle.running}
                 onClick={() => void toggle.run()}
                 aria-label={`${project.isActive ? 'Archive' : 'Restore'} project ${project.code}`}

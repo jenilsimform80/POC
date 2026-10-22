@@ -83,20 +83,23 @@ export function TaskList({ projectCode, tasks, people = [], onAdd, onUpdate }: T
               </form>
             ) : (
               <>
-                <span>
-                  {task.name} {!task.isActive && <Badge tone="neutral">Archived</Badge>}{' '}
-                  {!task.canLog && <Badge tone="neutral">Assigned to others</Badge>}
-                </span>
-                {task.assigneeIds && task.assigneeIds.length > 0 && (
-                  <span className={styles.assignees}>
-                    Assigned to:{' '}
-                    {task.assigneeIds.map((id) => nameOf.get(id) ?? 'another user').join(', ')}
+                <div className={styles.taskInfo}>
+                  <span className={styles.taskName}>
+                    {task.name} {!task.isActive && <Badge tone="neutral">Archived</Badge>}{' '}
+                    {!task.canLog && <Badge tone="neutral">Assigned to others</Badge>}
                   </span>
-                )}
+                  {task.assigneeIds && task.assigneeIds.length > 0 && (
+                    <span className={styles.assignees}>
+                      Assigned to:{' '}
+                      {task.assigneeIds.map((id) => nameOf.get(id) ?? 'another user').join(', ')}
+                    </span>
+                  )}
+                </div>
                 {onUpdate && task.canManage && (
                   <span className={styles.taskActions}>
                     <Button
                       variant="secondary"
+                      className={styles.small}
                       aria-label={`Rename task ${task.name} in ${projectCode}`}
                       onClick={() => {
                         setEditingId(task.id);
@@ -107,6 +110,7 @@ export function TaskList({ projectCode, tasks, people = [], onAdd, onUpdate }: T
                     </Button>
                     <Button
                       variant="secondary"
+                      className={styles.small}
                       aria-label={`Assign task ${task.name} in ${projectCode}`}
                       onClick={() => {
                         setAssigningId(assigningId === task.id ? null : task.id);
@@ -117,6 +121,7 @@ export function TaskList({ projectCode, tasks, people = [], onAdd, onUpdate }: T
                     </Button>
                     <Button
                       variant="secondary"
+                      className={styles.small}
                       aria-label={`${task.isActive ? 'Archive' : 'Restore'} task ${task.name} in ${projectCode}`}
                       disabled={change.running}
                       onClick={() => void change.run(task.id, { isActive: !task.isActive })}
@@ -128,7 +133,7 @@ export function TaskList({ projectCode, tasks, people = [], onAdd, onUpdate }: T
               </>
             )}
             {assigningId === task.id && (
-              <div className="stack">
+              <div className={`stack ${styles.assignPanel}`}>
                 <PersonChecklist
                   legend={`Who can log time to ${task.name}? (nobody selected = everyone)`}
                   people={people}
@@ -155,7 +160,7 @@ export function TaskList({ projectCode, tasks, people = [], onAdd, onUpdate }: T
 
       {onAdd && (
         <form
-          className="row"
+          className={styles.addTask}
           aria-label={`Add task to ${projectCode}`}
           onSubmit={(e) => void onAddSubmit(e)}
         >
@@ -165,7 +170,7 @@ export function TaskList({ projectCode, tasks, people = [], onAdd, onUpdate }: T
             onChange={(e) => setNewName(e.target.value)}
           />
           {people.length > 0 && (
-            <details>
+            <details className={styles.assignDetails}>
               <summary>
                 Assign to people ({newAssignees.length === 0 ? 'everyone' : newAssignees.length})
               </summary>
