@@ -4,10 +4,12 @@ import type { WeekSummary } from '../../api/types';
 import { Alert } from '../../components/ui/Alert';
 import { Button } from '../../components/ui/Button';
 import { describeError } from '../../components/ui/describeError';
+import { useCurrentUser } from '../../auth/useAuth';
 import { useAsync } from '../../hooks/useAsync';
 import { useMutation } from '../../hooks/useMutation';
 import { formatTimestamp } from '../../lib/dates';
 import { useCallback } from 'react';
+import styles from './Timesheet.module.css';
 
 interface SubmissionPanelProps {
   week: WeekSummary;
@@ -17,6 +19,7 @@ interface SubmissionPanelProps {
 
 /** Shows the review status of the week and lets the owner (re)submit it. */
 export function SubmissionPanel({ week, onSubmitted }: SubmissionPanelProps) {
+  const user = useCurrentUser();
   const [confirming, setConfirming] = useState(false);
   const submit = useMutation(async () => {
     await submitWeek(week.weekStart);
@@ -44,6 +47,12 @@ export function SubmissionPanel({ week, onSubmitted }: SubmissionPanelProps) {
         <RejectionNotice submissionId={week.submission.id} />
       )}
 
+      {canSubmit && !user.managerId && (
+        <Alert variant="info" title="No manager assigned">
+          You have no manager, so this timesheet will be sent to an admin for approval by default.
+        </Alert>
+      )}
+
       {submit.error && <Alert variant="error">{describeError(submit.error)}</Alert>}
 
       {canSubmit && !confirming && (
@@ -55,21 +64,23 @@ export function SubmissionPanel({ week, onSubmitted }: SubmissionPanelProps) {
         </div>
       )}
       {canSubmit && confirming && (
-        <div role="group" aria-label="Confirm submit" className="row">
+        <div role="group" aria-label="Confirm submit" className={styles.confirmBar}>
           <span>
             Submit this week? You will not be able to edit it until your manager (or an admin, if
             you have none) decides.
           </span>
-          <Button onClick={() => void submit.run()} disabled={submit.running}>
-            {submit.running ? 'Submitting…' : 'Yes, submit'}
-          </Button>
-          <Button
-            variant="secondary"
-            onClick={() => setConfirming(false)}
-            disabled={submit.running}
-          >
-            Cancel
-          </Button>
+          <div className={styles.confirmActions}>
+            <Button onClick={() => void submit.run()} disabled={submit.running}>
+              {submit.running ? 'Submitting…' : 'Yes, submit'}
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={() => setConfirming(false)}
+              disabled={submit.running}
+            >
+              Cancel
+            </Button>
+          </div>
         </div>
       )}
     </section>

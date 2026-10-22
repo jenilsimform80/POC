@@ -594,6 +594,20 @@ describe('timesheet: weekly submission', () => {
     expect(screen.getByRole('button', { name: 'Yes, submit' })).toBeEnabled();
   });
 
+  it('tells a user without a manager that the timesheet goes to an admin', async () => {
+    const backend = fakeBackend([entry({ id: 'e1' })]);
+    mockApi({
+      ...backend.handlers,
+      ...signedInAs({ ...users.contributor, managerId: null }),
+    });
+    renderRoutes(`/timesheet?week=${WEEK}`);
+    await screen.findByText('total');
+
+    expect(
+      screen.getByText(/no manager, so this timesheet will be sent to an admin/),
+    ).toBeVisible();
+  });
+
   it('shows the manager’s reason for a rejection and allows editing and resubmitting', async () => {
     const backend = fakeBackend([entry({ id: 'e1' })], { status: 'REJECTED' });
     const { api } = await open(backend, {

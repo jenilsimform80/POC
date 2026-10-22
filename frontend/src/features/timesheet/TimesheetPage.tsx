@@ -72,14 +72,16 @@ export function TimesheetPage() {
 
   return (
     <>
-      <h1>Timesheet</h1>
-      <WeekNavigator
-        weekStart={weekStart}
-        weekEnd={
-          week.state.status === 'success' ? week.state.data.weekEnd : weekDays(weekStart)[6]!
-        }
-        onChange={changeWeek}
-      />
+      <div className={styles.pageHeader}>
+        <h1>Timesheet</h1>
+        <WeekNavigator
+          weekStart={weekStart}
+          weekEnd={
+            week.state.status === 'success' ? week.state.data.weekEnd : weekDays(weekStart)[6]!
+          }
+          onChange={changeWeek}
+        />
+      </div>
 
       <AsyncView
         state={state}

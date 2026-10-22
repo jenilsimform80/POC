@@ -60,11 +60,20 @@ export function DaySection({
   return (
     <section aria-labelledby={headingId} className={sectionClass}>
       <header className={styles.dayHeader}>
-        <h3 id={headingId}>{formatDay(date)}</h3>
-        <span className={styles.dayTotal}>{total > 0 ? `${total} h` : '—'}</span>
+        <h3 id={headingId}>
+          {formatDay(date)}
+          {isToday && <Badge tone="info">Today</Badge>}
+        </h3>
+        <span
+          className={total > 0 ? styles.dayTotal : `${styles.dayTotal} ${styles.dayTotalEmpty}`}
+        >
+          {total > 0 ? `${total} h` : '—'}
+        </span>
       </header>
 
-      {entries.length === 0 && !adding && <p className="muted">No time logged.</p>}
+      {entries.length === 0 && !adding && (
+        <p className={`muted ${styles.dayEmpty}`}>No time logged.</p>
+      )}
 
       <ul className={styles.entries}>
         {entries.map((entry) =>
@@ -88,7 +97,7 @@ export function DaySection({
                 {entry.notes && <p className={styles.notes}>{entry.notes}</p>}
               </div>
               <div className={styles.entryMeta}>
-                <span>{entry.hours} h</span>
+                <span className={styles.entryHours}>{entry.hours} h</span>
                 <Badge tone={entry.isBillable ? 'success' : 'neutral'}>
                   {entry.isBillable ? 'Billable' : 'Non-billable'}
                 </Badge>
@@ -96,6 +105,7 @@ export function DaySection({
                   <>
                     <Button
                       variant="secondary"
+                      className={styles.small}
                       onClick={() => setEditingId(entry.id)}
                       aria-label={`Edit entry ${lookup.projectLabel(entry.projectId)}`}
                     >
@@ -103,6 +113,7 @@ export function DaySection({
                     </Button>
                     <Button
                       variant="secondary"
+                      className={styles.small}
                       onClick={() => setConfirmingId(entry.id)}
                       aria-label={`Delete entry ${lookup.projectLabel(entry.projectId)}`}
                     >
