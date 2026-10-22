@@ -6,8 +6,8 @@ import { Prisma } from '../generated/prisma/client.js';
  *
  * - CONTRIBUTOR: only their own records.
  * - MANAGER: their own records and those of users whose `managerId` is them (direct reports).
- * - ADMIN (Admin/Finance): may view every user and lock periods; admins do NOT approve
- *   timesheets - only the direct manager does.
+ * - ADMIN (Admin/Finance): may view every user and lock periods; admins approve timesheets only
+ *   as a fallback, when the owner has no usable manager (ADR 0016), never their own.
  *
  * Rules are expressed as Prisma `where` filters so the database enforces scope in the same query
  * that fetches the record (no "fetch by id, then check" gap - the IDOR-safe pattern).

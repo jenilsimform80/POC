@@ -437,7 +437,7 @@ export const operations: OperationSpec[] = [
     tag: 'Submissions',
     summary: 'List submissions',
     description:
-      "Scoped: contributor = own; manager = own + reports; admin = all. `forApproval=true` (MANAGER only) lists direct reports' submissions and **defaults to `status=SUBMITTED`**.",
+      "Scoped: contributor = own; manager = own + reports; admin = all. `forApproval=true` (MANAGER or ADMIN) lists what the caller may decide (a manager's direct reports; for an admin, people with no usable manager) and **defaults to `status=SUBMITTED`**.",
     access: 'any',
     request: { query: listSubmissionsSchemas.query },
     success: { status: 200, description: 'Submissions.', schema: 'SubmissionList' },

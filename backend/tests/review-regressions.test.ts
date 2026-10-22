@@ -274,7 +274,7 @@ describe('finding 6: documented contract matches behaviour', () => {
   });
 });
 
-describe('finding 7: a week cannot be submitted to a manager who can never decide it', () => {
+describe('finding 7: a week is never submitted to someone who can never decide it', () => {
   it.each([
     [
       'an admin',
@@ -288,34 +288,48 @@ describe('finding 7: a week cannot be submitted to a manager who can never decid
       'a deactivated manager',
       () => prisma.user.update({ where: { id: ids.ma }, data: { isActive: false } }),
     ],
-  ])(
-    'refuses when the assigned manager is %s (422), leaving the week editable',
-    async (_label, arrange) => {
-      await as('dev').post('/api/time-entries', {
-        ...task,
-        workDate: '2026-03-10',
-        hours: 4,
-        isBillable: true,
-      });
-      await arrange();
+  ])('routes to an admin when the assigned manager is %s', async (_label, arrange) => {
+    await as('dev').post('/api/time-entries', {
+      ...task,
+      workDate: '2026-03-10',
+      hours: 4,
+      isBillable: true,
+    });
+    await arrange();
 
-      const res = await as('dev').post('/api/submissions', { weekStart: '2026-03-09' });
+    const res = await as('dev').post('/api/submissions', { weekStart: '2026-03-09' });
 
-      expect(res.status).toBe(422);
-      expect(await prisma.weeklySubmission.count()).toBe(0);
-      expect(await prisma.auditLog.count()).toBe(0);
-      expect(
-        (
-          await as('dev').post('/api/time-entries', {
-            ...task,
-            workDate: '2026-03-10',
-            hours: 1,
-            isBillable: true,
-          })
-        ).status,
-      ).toBe(201);
-    },
-  );
+    expect(res.status).toBe(201);
+    const id = (res.body as { submission: { id: string } }).submission.id;
+    expect((await as('admin').post(`/api/submissions/${id}/approve`, {})).status).toBe(200);
+  });
+
+  it('refuses (422) and leaves the week editable when no manager or other admin can decide', async () => {
+    await as('dev').post('/api/time-entries', {
+      ...task,
+      workDate: '2026-03-10',
+      hours: 4,
+      isBillable: true,
+    });
+    await prisma.user.update({ where: { id: ids.ma }, data: { isActive: false } });
+    await prisma.user.update({ where: { id: ids.admin }, data: { isActive: false } });
+
+    const res = await as('dev').post('/api/submissions', { weekStart: '2026-03-09' });
+
+    expect(res.status).toBe(422);
+    expect(await prisma.weeklySubmission.count()).toBe(0);
+    expect(await prisma.auditLog.count()).toBe(0);
+    expect(
+      (
+        await as('dev').post('/api/time-entries', {
+          ...task,
+          workDate: '2026-03-10',
+          hours: 1,
+          isBillable: true,
+        })
+      ).status,
+    ).toBe(201);
+  });
 });
 
 describe('finding 8: the database health check records why it failed', () => {

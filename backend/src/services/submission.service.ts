@@ -3,7 +3,7 @@ import type { AuthUser } from '../auth/auth-user.js';
 import { AppError } from '../errors/app-error.js';
 import type { PrismaClient, SubmissionStatus } from '../generated/prisma/client.js';
 import { addDays, toIsoDate } from '../utils/dates.js';
-import { assertCanDecideSubmission } from './authorization.service.js';
+import { assertCanDecideSubmission, unmanagedOwnerWhere } from './authorization.service.js';
 import { recordAudit } from './audit.service.js';
 import { assertDatesUnlocked } from './period-lock.service.js';
 import { lockUserTimesheet } from './time-entry.service.js';
@@ -51,25 +51,26 @@ function toSubmissionView(submission: SubmissionRow, approvals?: ApprovalRow[]) 
  * submission: whichever commits first wins and the other sees the committed state.
  */
 export async function submitWeek(prisma: PrismaClient, actor: AuthUser, weekStart: Date) {
-  if (!actor.managerId) {
-    throw new AppError(
-      'BUSINESS_RULE_VIOLATION',
-      422,
-      'You have no manager assigned to approve your timesheet',
-    );
-  }
-  // Refuse up front if the assigned manager could never decide it (not a MANAGER, or deactivated):
-  // otherwise the week would sit SUBMITTED, and frozen, forever.
-  const manager = await prisma.user.findFirst({
-    where: { id: actor.managerId, role: 'MANAGER', isActive: true },
-    select: { id: true },
-  });
+  // Someone must be able to decide this week, or it would sit SUBMITTED (frozen) forever: the
+  // assigned manager when they are an active MANAGER, otherwise another active admin.
+  const manager = actor.managerId
+    ? await prisma.user.findFirst({
+        where: { id: actor.managerId, role: 'MANAGER', isActive: true },
+        select: { id: true },
+      })
+    : null;
   if (!manager) {
-    throw new AppError(
-      'BUSINESS_RULE_VIOLATION',
-      422,
-      'Your assigned manager is not an active manager and cannot approve timesheets',
-    );
+    const otherAdmin = await prisma.user.findFirst({
+      where: { role: 'ADMIN', isActive: true, id: { not: actor.id } },
+      select: { id: true },
+    });
+    if (!otherAdmin) {
+      throw new AppError(
+        'BUSINESS_RULE_VIOLATION',
+        422,
+        'No manager or other administrator is available to approve your timesheet',
+      );
+    }
   }
 
   return prisma.$transaction(async (tx) => {
@@ -129,8 +130,8 @@ export async function listSubmissions(
     forApproval?: boolean | undefined;
   },
 ) {
-  if (filter.forApproval && actor.role !== 'MANAGER') {
-    throw new AppError('FORBIDDEN', 403, 'Only managers have an approval queue');
+  if (filter.forApproval && actor.role !== 'MANAGER' && actor.role !== 'ADMIN') {
+    throw new AppError('FORBIDDEN', 403, 'Only managers and admins have an approval queue');
   }
   if (filter.userId !== undefined && filter.userId !== actor.id) {
     const visible = await prisma.user.findFirst({
@@ -146,8 +147,13 @@ export async function listSubmissions(
     where: {
       AND: [
         ownedByVisibleUser(actor),
-        // The approval queue is strictly "my direct reports", never my own submissions.
-        filter.forApproval ? { user: { managerId: actor.id } } : {},
+        // The approval queue is strictly what I may decide, never my own submissions: a manager's
+        // direct reports, or (admin) people whose manager is missing/unusable.
+        filter.forApproval
+          ? actor.role === 'MANAGER'
+            ? { user: { managerId: actor.id } }
+            : { userId: { not: actor.id }, user: unmanagedOwnerWhere }
+          : {},
         status ? { status } : {},
         filter.weekStart ? { weekStart: filter.weekStart } : {},
         filter.userId ? { userId: filter.userId } : {},
@@ -169,7 +175,7 @@ export async function getSubmission(prisma: PrismaClient, actor: AuthUser, id: s
 }
 
 /**
- * Approve or reject. Authorization (owner's direct manager only) is checked inside the
+ * Approve or reject. Authorization (owner's direct manager, or an admin when none is usable) is checked inside the
  * transaction; the status-guarded UPDATE makes a double or concurrent decision impossible:
  * exactly one request changes SUBMITTED -> decision, the other gets 409.
  */

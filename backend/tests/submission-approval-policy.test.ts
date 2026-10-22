@@ -76,8 +76,31 @@ describe('assertCanDecideSubmission', () => {
     });
   });
 
+  it('refuses an admin while the owner has an active manager (404)', async () => {
+    const error = await failureOf(admin);
+
+    expect(error.status).toBe(404);
+  });
+
+  it('allows an admin when the owner has no manager, but never the owner themself', async () => {
+    const orphan = asAuthUser(await createUser(prisma, { email: 'orphan@t.dev' }));
+    const week = await prisma.weeklySubmission.create({
+      data: { userId: orphan.id, weekStart: new Date('2026-03-09T00:00:00.000Z') },
+    });
+
+    expect((await assertCanDecideSubmission(prisma, admin, week.id)).id).toBe(week.id);
+    expect((await failureOf(orphan, week.id)).status).toBe(403);
+    const otherAdmin = asAuthUser(await createUser(prisma, { email: 'a2@t.dev', role: 'ADMIN' }));
+    await prisma.weeklySubmission.create({
+      data: { userId: otherAdmin.id, weekStart: new Date('2026-03-09T00:00:00.000Z') },
+    });
+    const own = await prisma.weeklySubmission.findFirstOrThrow({
+      where: { userId: otherAdmin.id },
+    });
+    expect((await failureOf(otherAdmin, own.id)).status).toBe(404);
+  });
+
   it.each([
-    ['an admin', () => admin],
     ['the contributor who owns it', () => owner],
     ['a colleague contributor', () => colleague],
   ])('refuses %s with 403', async (_label, actor) => {

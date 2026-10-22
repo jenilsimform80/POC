@@ -122,10 +122,40 @@ describe('POST /api/submissions', () => {
     expect(await prisma.weeklySubmission.count()).toBe(0);
   });
 
-  it('refuses a user with no manager to approve (422)', async () => {
+  it('lets a user with no manager submit: an admin will decide it', async () => {
     await logEntry('orphan', WEEK1);
 
-    expect((await submit('orphan')).status).toBe(422);
+    expect((await submit('orphan')).status).toBe(201);
+  });
+
+  it('refuses (422) when there is no manager and no other active admin to decide', async () => {
+    await prisma.user.update({ where: { id: ids.admin }, data: { isActive: false } });
+    await logEntry('orphan', WEEK1);
+
+    const res = await submit('orphan');
+
+    expect(res.status).toBe(422);
+    expect(await prisma.weeklySubmission.count()).toBe(0);
+  });
+
+  it('refuses (422) when the only admin would have to approve their own week', async () => {
+    await logEntry('admin', WEEK1);
+
+    expect((await submit('admin')).status).toBe(422);
+  });
+
+  it('lets an admin with no manager submit when another active admin exists', async () => {
+    await createUser(prisma, { email: 'admin2@t.dev', role: 'ADMIN' });
+    await logEntry('admin', WEEK1);
+
+    expect((await submit('admin')).status).toBe(201);
+  });
+
+  it('falls back to the admins when the assigned manager is deactivated', async () => {
+    await prisma.user.update({ where: { id: ids.ma }, data: { isActive: false } });
+    await logEntry('dev', WEEK1);
+
+    expect((await submit('dev')).status).toBe(201);
   });
 
   it('only ever submits the caller’s own week (no way to submit for someone else)', async () => {
@@ -322,7 +352,6 @@ describe('authorization on approve/reject (HTTP level)', () => {
   });
 
   it.each([
-    ['an admin', 'admin'],
     ['the owner', 'dev'],
     ['a colleague contributor', 'dev2'],
   ])('refuses %s with 403', async (_label, who) => {
@@ -410,7 +439,7 @@ describe('viewing submissions', () => {
     );
     expect(users).toEqual([ids.dev]);
     expect((await as('dev').get('/api/submissions?forApproval=true')).status).toBe(403);
-    expect((await as('admin').get('/api/submissions?forApproval=true')).status).toBe(403);
+    expect((await as('orphan').get('/api/submissions?forApproval=true')).status).toBe(403);
   });
 
   it('GET /:id is visible to the owner, their manager and admin, 404 to everyone else', async () => {
@@ -420,5 +449,63 @@ describe('viewing submissions', () => {
     for (const who of ['dev', 'ma', 'admin']) expect((await as(who).get(path)).status).toBe(200);
     for (const who of ['mb', 'dev2', 'devb']) expect((await as(who).get(path)).status).toBe(404);
     expect((await request(app).get(path)).status).toBe(401);
+  });
+});
+
+describe('admin fallback when the owner has no usable manager', () => {
+  it('lets an admin approve a manager-less user’s week and records them as the decider', async () => {
+    const id = await submitted('orphan');
+
+    const res = await as('admin').post(`/api/submissions/${id}/approve`, { comment: 'ok' });
+
+    expect(res.status).toBe(200);
+    const submission = (res.body as SubmissionBody).submission;
+    expect(submission.status).toBe('APPROVED');
+    expect(submission.approvals).toMatchObject([{ decision: 'APPROVED', managerId: ids.admin }]);
+  });
+
+  it('lets an admin reject with a reason', async () => {
+    const id = await submitted('orphan');
+
+    expect((await as('admin').post(`/api/submissions/${id}/reject`, {})).status).toBe(400);
+    expect(
+      (await as('admin').post(`/api/submissions/${id}/reject`, { comment: 'fix it' })).status,
+    ).toBe(200);
+    expect(await statusInDb(id)).toBe('REJECTED');
+  });
+
+  it('refuses an admin for a user who HAS an active manager (404, nothing changes)', async () => {
+    const id = await submitted('dev');
+
+    expect((await as('admin').post(`/api/submissions/${id}/approve`)).status).toBe(404);
+    expect(await statusInDb(id)).toBe('SUBMITTED');
+  });
+
+  it('lets an admin decide once the manager has been deactivated', async () => {
+    const id = await submitted('dev');
+    await prisma.user.update({ where: { id: ids.ma }, data: { isActive: false } });
+
+    expect((await as('admin').post(`/api/submissions/${id}/approve`)).status).toBe(200);
+  });
+
+  it('never lets an admin decide their own week', async () => {
+    await createUser(prisma, { email: 'admin2@t.dev', role: 'ADMIN' });
+    await logEntry('admin', WEEK1);
+    const created = await submit('admin');
+    const id = (created.body as SubmissionBody).submission.id;
+
+    expect((await as('admin').post(`/api/submissions/${id}/approve`)).status).toBe(404);
+    expect(await statusInDb(id)).toBe('SUBMITTED');
+  });
+
+  it('shows admins a queue of only the manager-less submissions', async () => {
+    await submitted('dev'); // has a manager: not the admin's to decide
+    const orphan = await submitted('orphan');
+
+    const queue = await as('admin').get('/api/submissions?forApproval=true');
+
+    expect(queue.status).toBe(200);
+    const list = (queue.body as { submissions: { id: string }[] }).submissions;
+    expect(list.map((x) => x.id)).toEqual([orphan]);
   });
 });

@@ -283,15 +283,20 @@ describe('a manager who reports to another manager', () => {
     const id = (submitted.body as { submission: { id: string } }).submission.id;
 
     expect((await as('mgr2').post(`/api/submissions/${id}/approve`, {})).status).toBe(404);
-    expect((await as('admin').post(`/api/submissions/${id}/approve`, {})).status).toBe(403);
+    expect((await as('admin').post(`/api/submissions/${id}/approve`, {})).status).toBe(404); // has a manager
     expect((await as('mgr').post(`/api/submissions/${id}/approve`, {})).status).toBe(404);
     expect((await as('boss').post(`/api/submissions/${id}/approve`, {})).status).toBe(200);
   });
 
-  it('still cannot submit when the top manager has nobody above them', async () => {
+  it('lets the top manager (nobody above them) submit; an admin decides it, not they themself', async () => {
     const { projectId, taskId } = await adminProject({ code: 'TOP' });
     expect((await logTime('boss', projectId, taskId)).status).toBe(201);
     const res = await as('boss').post('/api/submissions', { weekStart: WEEK });
-    expect(res.status).toBe(422);
+    expect(res.status).toBe(201);
+    const id = (res.body as { submission: { id: string } }).submission.id;
+
+    expect((await as('boss').post(`/api/submissions/${id}/approve`, {})).status).toBe(404);
+    expect((await as('mgr').post(`/api/submissions/${id}/approve`, {})).status).toBe(404);
+    expect((await as('admin').post(`/api/submissions/${id}/approve`, {})).status).toBe(200);
   });
 });

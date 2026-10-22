@@ -20,8 +20,8 @@ export function createSubmissionsRouter(prisma: PrismaClient): Router {
   router.post('/', validate(submitWeekSchemas), c.submit);
   router.get('/', validate(listSubmissionsSchemas), c.list);
   router.get('/:id', validate(submissionIdSchemas), c.get);
-  // Role gate here; "is this the owner's direct manager?" is enforced in the service.
-  router.post('/:id/approve', authorize('MANAGER'), validate(approveSchemas), c.approve);
-  router.post('/:id/reject', authorize('MANAGER'), validate(rejectSchemas), c.reject);
+  // Role gate here; "is this mine to decide?" (direct manager, or admin fallback) is in the service.
+  router.post('/:id/approve', authorize('MANAGER', 'ADMIN'), validate(approveSchemas), c.approve);
+  router.post('/:id/reject', authorize('MANAGER', 'ADMIN'), validate(rejectSchemas), c.reject);
   return router;
 }
