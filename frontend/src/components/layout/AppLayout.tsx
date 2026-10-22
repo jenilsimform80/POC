@@ -1,11 +1,11 @@
 import type { ReactNode } from 'react';
-import { NavLink, Outlet } from 'react-router';
+import { NavLink, Outlet, useNavigate } from 'react-router';
 import { canAccess, type Area } from '../../auth/access';
 import { useAuth } from '../../auth/useAuth';
 import { useMutation } from '../../hooks/useMutation';
 import { Alert } from '../ui/Alert';
 import { describeError } from '../ui/describeError';
-import { Button } from '../ui/Button';
+import { ActionMenu, type ActionMenuItem } from '../ui/ActionMenu';
 import styles from './AppLayout.module.css';
 import {
   ChartIcon,
@@ -57,9 +57,23 @@ function initials(name: string): string {
 export function AppLayout() {
   const { state, logout } = useAuth();
   const signOut = useMutation(logout);
+  const navigate = useNavigate();
   const user = state.status === 'authenticated' ? state.user : null;
   const items = user
     ? NAV_ITEMS.filter((item) => !item.area || canAccess(user.role, item.area))
+    : [];
+  const menuItems: ActionMenuItem[] = user
+    ? [
+        ...(canAccess(user.role, 'account')
+          ? [{ label: 'Account & password', onSelect: () => void navigate('/account') }]
+          : []),
+        {
+          label: signOut.running ? 'Signing out…' : 'Sign out',
+          onSelect: () => void signOut.run(),
+          disabled: signOut.running,
+          tone: 'danger' as const,
+        },
+      ]
     : [];
   const linkClass = ({ isActive }: { isActive: boolean }) =>
     isActive ? styles.active : styles.link;
@@ -126,7 +140,7 @@ export function AppLayout() {
       </aside>
       <div className={styles.content}>
         <header className={styles.topbar}>
-          <div className={styles.account}>
+          <ActionMenu label="Account menu" items={menuItems} triggerClassName={styles.account}>
             <span className={styles.avatar} aria-hidden="true">
               {initials(user.name)}
             </span>
@@ -134,14 +148,10 @@ export function AppLayout() {
               <span className={styles.name}>{user.name}</span>
               <small className={styles.role}>{ROLE_LABEL[user.role]}</small>
             </span>
-            <Button
-              variant="secondary"
-              disabled={signOut.running}
-              onClick={() => void signOut.run()}
-            >
-              Sign out
-            </Button>
-          </div>
+            <span className={styles.chevron} aria-hidden="true">
+              ▾
+            </span>
+          </ActionMenu>
         </header>
         {signOutBanner}
         <main id="main" className={styles.main}>

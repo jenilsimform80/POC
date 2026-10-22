@@ -242,7 +242,8 @@ describe('sign out and expired sessions', () => {
     renderRoutes('/');
     await screen.findByRole('heading', { name: /Welcome/ });
 
-    await userEvent.click(screen.getByRole('button', { name: 'Sign out' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Account menu' }));
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Sign out' }));
 
     expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeInTheDocument();
     expect(api.calls('POST /auth/logout')).toHaveLength(1);
@@ -269,7 +270,8 @@ describe('sign out and expired sessions', () => {
     const { router } = renderRoutes('/users');
     await screen.findByRole('heading', { name: 'Users' });
 
-    await userEvent.click(screen.getByRole('button', { name: 'Sign out' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Account menu' }));
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Sign out' }));
     await screen.findByRole('heading', { name: 'Sign in' });
     expect(router.state.location.state).toBeNull(); // nothing remembered after an explicit sign-out
 
@@ -302,7 +304,8 @@ describe('sign out and expired sessions', () => {
     renderRoutes('/');
     await screen.findByRole('heading', { name: /Welcome/ });
 
-    await userEvent.click(screen.getByRole('button', { name: 'Sign out' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Account menu' }));
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Sign out' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Could not sign out');
     expect(screen.getByRole('alert')).toHaveTextContent('You are still signed in');

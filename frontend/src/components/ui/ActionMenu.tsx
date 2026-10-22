@@ -6,6 +6,7 @@ import {
   useRef,
   useState,
   type KeyboardEvent,
+  type ReactNode,
 } from 'react';
 import { createPortal } from 'react-dom';
 import styles from './ActionMenu.module.css';
@@ -23,6 +24,10 @@ interface ActionMenuProps {
   label: string;
   items: ActionMenuItem[];
   disabled?: boolean;
+  /** Custom trigger content (e.g. an avatar and name); defaults to the three-dot icon. */
+  children?: ReactNode;
+  /** Replaces the default round icon-button styling when `children` is given. */
+  triggerClassName?: string;
 }
 
 const GAP = 4;
@@ -36,7 +41,13 @@ const GAP = 4;
  * Escape (focus returns to the button), Tab, scroll and resize. Arrow keys, Home and End move
  * between items.
  */
-export function ActionMenu({ label, items, disabled = false }: ActionMenuProps) {
+export function ActionMenu({
+  label,
+  items,
+  disabled = false,
+  children,
+  triggerClassName,
+}: ActionMenuProps) {
   const [open, setOpen] = useState(false);
   const [position, setPosition] = useState<{ top: number; left: number } | null>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -120,7 +131,7 @@ export function ActionMenu({ label, items, disabled = false }: ActionMenuProps) 
       <button
         ref={triggerRef}
         type="button"
-        className={styles.trigger}
+        className={triggerClassName ?? styles.trigger}
         aria-label={label}
         aria-haspopup="menu"
         aria-expanded={open}
@@ -128,11 +139,13 @@ export function ActionMenu({ label, items, disabled = false }: ActionMenuProps) 
         disabled={disabled}
         onClick={() => (open ? close(false) : setOpen(true))}
       >
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-          <circle cx="12" cy="5" r="1.8" />
-          <circle cx="12" cy="12" r="1.8" />
-          <circle cx="12" cy="19" r="1.8" />
-        </svg>
+        {children ?? (
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <circle cx="12" cy="5" r="1.8" />
+            <circle cx="12" cy="12" r="1.8" />
+            <circle cx="12" cy="19" r="1.8" />
+          </svg>
+        )}
       </button>
       {open &&
         createPortal(
