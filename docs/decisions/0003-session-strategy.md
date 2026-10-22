@@ -14,4 +14,4 @@ Decision:
 
 Alternatives: JWT in memory/cookie (cannot revoke on logout without a server-side list, which is a session store anyway); `express-session` + `connect-pg-simple` (works, but a second schema and more dependencies); bcrypt (acceptable, but argon2id is memory-hard and preferred); `Strict` cookies (breaks following links into the app; Lax plus the Origin check is sufficient here).
 
-Consequences: Each authenticated request costs one indexed DB lookup (acceptable at POC scale). Expired sessions are deleted when encountered; there is no background cleanup job yet (known limitation). Session TTL is absolute, not sliding. Changing a user's role or deactivating them takes effect on their next request because the user row is read on every request.
+Consequences: Each authenticated request costs one indexed DB lookup (acceptable at this project's scale). Expired sessions are deleted when encountered; there is no background cleanup job yet (known limitation). Session TTL is absolute, not sliding. Changing a user's role or deactivating them takes effect on their next request because the user row is read on every request.

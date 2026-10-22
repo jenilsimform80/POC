@@ -3,7 +3,7 @@
 Honest list as of the end of Phase 9. Nothing here is hidden behind a passing test: each item is either a conscious scope/design choice, an unverified assumption, or a deployment responsibility.
 
 ## 1. Requirements are unverified
-- `docs/requirements.md` is **"Derived from prompt — original specification unverified."** The original POC specification was never provided. Every rule below marked *assumption* has not been checked against it (POC-DOC-001 is still Blocked).
+- `docs/requirements.md` is **"Derived from prompt — original specification unverified."** The original specification was never provided. Every rule below marked *assumption* has not been checked against it (POC-DOC-001 is still Blocked).
 - Assumptions adopted so work could proceed: quarter-hour entries, 24 h/day hard cap, warnings above 10 h/day and 48 h/week; ISO (Monday) weeks; submitted/approved weeks frozen, rejected weeks reopen, no "recall"; a week needs ≥ 1 entry and an *active manager with role MANAGER* to be submitted; only the owner's direct manager approves (admins cannot); global calendar-month locks, admin-only unlock with a reason, admins not exempt; reports count all logged hours (not only approved); budget report admin-only with WARNING ≥ 80 % / OVER > 100 %; allocated hours hidden from non-admins; calendar dates never converted between time zones, years 2000–2100.
 
 ## 2. Product scope not built
@@ -24,7 +24,7 @@ Honest list as of the end of Phase 9. Nothing here is hidden behind a passing te
 - Login throttling is in-memory per IP (resets on restart, not shared across instances). Behind a proxy set `TRUST_PROXY` to the exact hop count (never `true`). Add proxy-level rate limiting for the whole API.
 - No background cleanup of expired sessions; absolute (not sliding) session expiry; no "sign out everywhere".
 - Requests without an `Origin` header are accepted (not a browser CSRF vector).
-- Source maps are emitted in production builds (POC).
+- Source maps are emitted in production builds (timesheets-billing).
 - **Production must configure** (see `docs/security.md`): `NODE_ENV=production`, TLS + HSTS at the proxy, SPA and `/api` on one origin, exact `FRONTEND_URL`, `TRUST_PROXY`, SPA response headers (CSP, nosniff, referrer policy) because the backend's helmet does not cover static files, no public `.map` files, a real environment instead of `--env-file=.env` in containers.
 
 ## 5. Performance

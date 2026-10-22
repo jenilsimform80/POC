@@ -30,6 +30,7 @@ Consequences: trade-offs and follow-ups
 | 0013 | [OpenAPI document and Swagger UI](0013-openapi-swagger-ui.md) | Accepted |
 | 0014 | [Restricted projects, task assignment and manager hierarchy](0014-project-access-and-task-assignment.md) | Accepted |
 | 0015 | [Bearer-token authentication (JWT + rotating refresh token)](0015-bearer-token-authentication.md) | Accepted (supersedes cookie part of 0003) |
+| 0016 | [Admin approves when the owner has no usable manager](0016-admin-approval-fallback.md) | Accepted (amends 0004) |
 
 No further decisions are planned.
 

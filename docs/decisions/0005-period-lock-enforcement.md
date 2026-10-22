@@ -27,7 +27,7 @@ No deadlock is possible: the exclusive holder takes only that one lock; edit tra
 - Removing the trigger's shared lock fails (a) and (b); dropping the trigger fails the DB-layer tests and (a)/(b) while the API tests still pass; disabling the service check fails the `enforcedBy: "service"` assertions.
 
 ## Limits (verified, not assumed)
-- The role that **owns the tables** (the app role in this POC) can `ALTER TABLE ... DISABLE TRIGGER` and `TRUNCATE` (row triggers do not fire for TRUNCATE). So the trigger stops application code and ordinary SQL, **not** a DBA or a compromised owner role. Production hardening: separate the migration/owner role from a least-privilege application role (no ALTER/TRUNCATE), and optionally add statement-level TRUNCATE triggers.
+- The role that **owns the tables** (the app role in timesheets-billing) can `ALTER TABLE ... DISABLE TRIGGER` and `TRUNCATE` (row triggers do not fire for TRUNCATE). So the trigger stops application code and ordinary SQL, **not** a DBA or a compromised owner role. Production hardening: separate the migration/owner role from a least-privilege application role (no ALTER/TRUNCATE), and optionally add statement-level TRUNCATE triggers.
 - Locks are per calendar month, not per project or arbitrary range. Entries created *before* a lock is placed are not re-validated.
 
 ## Alternatives considered

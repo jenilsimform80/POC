@@ -14,7 +14,7 @@ Users existed only through the dev seed script (ADR 0003 deliberately has no reg
 
 ## Alternatives
 - Public signup: anyone could register and pick a role. Rejected.
-- Invite or reset-link email flow: the right production design (the admin never knows the password) but needs an email service and token tables; out of scope for the POC.
+- Invite or reset-link email flow: the right production design (the admin never knows the password) but needs an email service and token tables; out of scope for timesheets-billing.
 - Letting managers create their own contributors: plausible, but widens who can create accounts; not requested.
 
 ## Editing, deactivating and passwords (added in a second step)

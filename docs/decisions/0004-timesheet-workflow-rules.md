@@ -14,6 +14,6 @@ Status: Accepted (Phase 4). All rule values are ASSUMPTIONS: the original spec i
 ## Concurrency
 Every write that depends on a sum or on a week's status (create/update/delete entry, submit, decide) runs in one transaction that first takes `pg_advisory_xact_lock(hashtextextended(userId, 0))`. Writes of the same user are therefore serialized, and the checks (daily total, week status) read committed state. Decisions additionally use a status-guarded `UPDATE ... WHERE status = 'SUBMITTED'`, so of two concurrent decisions exactly one wins.
 
-Alternatives: `SERIALIZABLE` isolation with retries (more complex error handling), row lock on the `users` row (works, but advisory locks avoid blocking unrelated updates to that row), a DB trigger for the 24 h rule (possible later; the service check under the lock is sufficient for the POC).
+Alternatives: `SERIALIZABLE` isolation with retries (more complex error handling), row lock on the `users` row (works, but advisory locks avoid blocking unrelated updates to that row), a DB trigger for the 24 h rule (possible later; the service check under the lock is sufficient for timesheets-billing).
 
 Consequences: the lock is per user, so it does not protect against *period locking* by an admin; that is Phase 5 and needs its own enforcement (and likely a DB-level guard). Audit-trail writes for submit/approve/reject are also Phase 5 (they will be added inside these same transactions).

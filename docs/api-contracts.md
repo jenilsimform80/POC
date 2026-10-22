@@ -148,10 +148,10 @@ Submission view: `{id, userId, weekStart, status, submittedAt, updatedAt, approv
 
 | Endpoint | Rules |
 |----------|-------|
-| `POST /api/submissions` | `{weekStart (Monday)}`; own week only; needs ≥1 entry and an assigned manager who is an **active user with role MANAGER** (otherwise 422: the week would never be decidable); resubmits a REJECTED week; SUBMITTED/APPROVED → 409 `INVALID_STATE` → 201 `{submission}` |
-| `GET /api/submissions?status&weekStart&userId&forApproval` | scoped: contributor own; manager own + reports; admin all. `forApproval=true` (MANAGER only, else 403) lists only direct reports' submissions and **defaults to `status=SUBMITTED`** (the pending queue); pass `status` explicitly to see decided ones. A `userId` outside the caller's scope is 404, like on the entry and timesheet endpoints |
+| `POST /api/submissions` | `{weekStart (Monday)}`; own week only; needs ≥1 entry and someone able to decide it: the assigned manager (active, role MANAGER) **or, when there is none, another active admin** (otherwise 422: the week would never be decidable); resubmits a REJECTED week; SUBMITTED/APPROVED → 409 `INVALID_STATE` → 201 `{submission}` |
+| `GET /api/submissions?status&weekStart&userId&forApproval` | scoped: contributor own; manager own + reports; admin all. `forApproval=true` (MANAGER or ADMIN, else 403) lists what the caller may decide: a manager's direct reports; for an admin, submissions of people with no usable manager (none assigned, deactivated, or no longer a MANAGER), never their own and **defaults to `status=SUBMITTED`** (the pending queue); pass `status` explicitly to see decided ones. A `userId` outside the caller's scope is 404, like on the entry and timesheet endpoints |
 | `GET /api/submissions/:id` | owner, owner's manager, admin; others 404; includes `approvals` history |
-| `POST /api/submissions/:id/approve` | role MANAGER (else 403) **and** owner's current direct manager (else 404); optional `{comment}`; must be SUBMITTED else 409 |
+| `POST /api/submissions/:id/approve` | owner's current direct manager (role MANAGER), **or** an ADMIN when the owner has no usable manager and the admin is not the owner; everyone else 403 (wrong role) / 404 (not yours to decide); optional `{comment}`; must be SUBMITTED else 409 |
 | `POST /api/submissions/:id/reject` | same as approve; `{comment}` required (non-blank) |
 
 # Phase 5 — Period locking and audit trail

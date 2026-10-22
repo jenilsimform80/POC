@@ -12,7 +12,7 @@ Status values: Todo, In Progress, Blocked, Done. Priority: P0 (critical) – P2.
 - **Files**: CLAUDE.md, README.md, .gitignore, `.claude/`, `docs/`, `.claude/tasks/`.
 
 ### POC-DOC-001 Verify requirements against original spec
-- **Description**: When the original POC spec is supplied, review it and reconcile `docs/requirements.md`; remove the "unverified" banner only after review.
+- **Description**: When the original spec is supplied, review it and reconcile `docs/requirements.md`; remove the "unverified" banner only after review.
 - **Phase**: any (blocks claiming full coverage) · **Priority**: P0 · **Dependencies**: spec provided by owner · **Status**: Blocked (spec not provided)
 - **Acceptance**: each requirement mapped to a spec section; gaps/conflicts listed.
 - **Tests**: n/a · **Docs**: docs/requirements.md
@@ -102,7 +102,7 @@ Status: tasks complete, pending phase approval. See ADR 0010, `docs/security.md`
 - **POC-QA-005** Time-zone and report accuracy (month-boundary data read from +14/−7/−11/UTC browsers; week, report, budget and API agree) and the final full quality run (backend/frontend checks, audits, builds, e2e), diff review and known limitations. P0. Status: Done.
 - Phase acceptance verified (see phase-status.md).
 
-## Phase 10 — Delivery and POC Walkthrough
+## Phase 10 — Delivery and Walkthrough
 Status: **delivery artifacts complete; Docker verification Blocked** (no container runtime on the development machine, installing one needs sudo). See ADR 0011, `docs/deployment.md`, `docs/walkthrough.md`.
 - **POC-OPS-001** Docker Compose (db + migrate + backend + nginx web + demo seed), Dockerfiles, nginx config, role-separation init. P0. Status: **Blocked** - written and YAML-parsed, but `docker compose up` was never run. Acceptance not met until it is.
 - **POC-OPS-002** Environment/secret documentation and clean-setup verification. P0. Status: Done for the local (non-Docker) path - followed `docs/deployment.md` section B literally on a clean copy with fresh databases (see phase-status.md); Docker path unverified.

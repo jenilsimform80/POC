@@ -27,7 +27,7 @@ Candidates tested:
 - Existing indexes are all used and stay: `(user_id, work_date)` (138 scans in the run), `(work_date)` (24 scans; narrow month ranges and the lock-time snapshot use a bitmap index scan; without it the month snapshot takes a parallel seq scan), `(project_id, work_date)` (9 scans). No new index was added.
 
 ## Known limits
-- Whole-table reports (admin full range, lifetime budget) are O(rows): ~0.5 s at 600 k entries. Acceptable for a POC; at much larger volumes the options are monthly rollup tables or a materialized view refreshed on lock. Not built (no requirement).
+- Whole-table reports (admin full range, lifetime budget) are O(rows): ~0.5 s at 600 k entries. Acceptable for timesheets-billing; at much larger volumes the options are monthly rollup tables or a materialized view refreshed on lock. Not built (no requirement).
 - The numbers are from one developer machine and synthetic uniform data; treat them as relative evidence, not a benchmark.
 - Reports count all logged hours regardless of submission status. If billing must use approved hours only, add a submission-status filter (join on `(user_id, week_start)`); not requested.
 

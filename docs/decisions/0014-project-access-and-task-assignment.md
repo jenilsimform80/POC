@@ -13,7 +13,7 @@ Three gaps were found while using the app: every project was visible to every us
 - **Managers may report to another manager.** The "manager cannot have a manager" rule is dropped; a manager's manager must be an active manager, and loops (A→B→A, or self) are refused under the existing user-administration advisory lock. Approval already worked on `users.manager_id`, so only the upper manager can decide a manager's timesheet. The top manager still cannot submit; that is intentional (admins do not approve, ADR 0003).
 
 ## Alternatives
-- Roles per project (project-manager, member…): more realistic, much more surface; rejected for a POC.
+- Roles per project (project-manager, member…): more realistic, much more surface; rejected for timesheets-billing.
 - Letting admins approve top-level managers: reverses a Phase 3 decision; not chosen.
 - Auto-granting managers access to their reports' projects: implicit and hard to audit.
 

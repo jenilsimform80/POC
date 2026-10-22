@@ -1,5 +1,5 @@
 > **Derived from prompt — original specification unverified.**
-> This document was written from the master project prompt only. The original POC specification has not been provided or reviewed, so no requirement below is verified against it. Backlog task POC-DOC-001 tracks verification once the spec is supplied.
+> This document was written from the master project prompt only. The original specification has not been provided or reviewed, so no requirement below is verified against it. Backlog task POC-DOC-001 tracks verification once the spec is supplied.
 
 # Requirements
 
@@ -45,7 +45,7 @@ A timesheet and project billing application where contributors log daily hours a
 - Hours per entry in 0.25 steps, ≤ 24; daily total ≤ 24 (hard); warnings above 10 h/day and 48 h/week (soft).
 - Submitted/approved weeks are frozen; rejected weeks are editable and resubmittable; no recall action.
 - A week must contain at least one entry to be submitted; a user without a manager cannot submit.
-- Only the owner's direct manager approves/rejects (admins do not); rejection needs a reason.
+- Only the owner's direct manager approves/rejects; if the owner has no usable manager (none assigned, deactivated, or not a MANAGER) any other admin does instead (never the owner themself); rejection needs a reason.
 - Admin manages projects/tasks; all users may log time against any active project (no per-project assignment model).
 - Entries are not restricted to past dates; entry dates must lie within the project's date window when one is set.
 

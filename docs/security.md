@@ -95,7 +95,7 @@ An independent read-only review produced 8 findings; each was reproduced by a fa
 - Tokens are in JavaScript **memory only** (ADR 0015; never web storage or cookies), so XSS could use them while the tab is open; the strict CSP is the main defence. A page reload signs the user out.
 - CORS lists `FRONTEND_URL` (without credentials). There is no Origin check: with no cookies there is no CSRF to block.
 - Users only see backend messages (`ApiError.message`) or a fixed generic text; raw exceptions and non-JSON error bodies are never rendered (tested).
-- Build output includes source maps (`build.sourcemap`) for the POC; disable for a public deployment.
+- Build output includes source maps (`build.sourcemap`) for timesheets-billing; disable for a public deployment.
 - Only `VITE_*` variables reach browser code; none holds a secret.
 
 ## Frontend notes (Phase 8)

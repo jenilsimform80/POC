@@ -1,6 +1,6 @@
 # Phase Status
 
-**Active phase:** Phase 10 — Delivery and POC Walkthrough. Artifacts, docs and verifiable checks are complete; **Docker verification is blocked** (no container runtime available; installing needs sudo).
+**Active phase:** Phase 10 — Delivery and Walkthrough. Artifacts, docs and verifiable checks are complete; **Docker verification is blocked** (no container runtime available; installing needs sudo).
 **Next step:** on a machine with Docker run `docker compose config` and `docker compose up --build`, then `scripts/walkthrough.sh` and the role-separation checks in `docs/deployment.md`; owner to approve project closure.
 
 | Phase | Name | Status |
@@ -15,11 +15,11 @@
 | 7 | Frontend Foundation | Complete — approved |
 | 8 | Frontend Features | Complete — approved |
 | 9 | Integration, Security and Final Quality | Complete — approved |
-| 10 | Delivery and POC Walkthrough | Incomplete — Docker verification blocked |
+| 10 | Delivery and Walkthrough | Incomplete — Docker verification blocked |
 
 ## Decisions
 - Structure lives at the workspace root (no nested `poc/`).
-- Git initialized locally on `main`; remote `origin` = `git@github.com:jenilsimform80/POC.git`; no commits or pushes made.
+- Git initialized locally on `main`; remote `origin` = `git@github.com:jenilsimform80/timesheets-billing.git`; no commits or pushes made.
 - `docs/requirements.md` derived from the prompt only, marked "Derived from prompt — original specification unverified."
 - `.env.example`, `backend/`, `frontend/`, `docker-compose.yml` deliberately deferred to the phases that need them.
 
