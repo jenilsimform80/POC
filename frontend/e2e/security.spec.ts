@@ -59,21 +59,25 @@ test.describe('security', () => {
     await anonymous.dispose();
   });
 
-  test('tokens are memory-only: not in cookies or web storage, and a reload signs out', async ({
+  test('tokens are per tab: not in cookies or localStorage, a reload stays signed in, a new tab does not share them', async ({
     browser,
   }) => {
     const { context, page } = await newSession(browser, 'dev1');
 
     const visible = await page.evaluate(() => ({
       cookie: document.cookie,
-      storage: JSON.stringify({ ...localStorage }) + JSON.stringify({ ...sessionStorage }),
+      local: JSON.stringify({ ...localStorage }),
     }));
     expect(visible.cookie).toBe('');
-    expect(visible.storage).not.toMatch(/eyJ|token/i); // no JWT, no refresh token
+    expect(visible.local).not.toMatch(/eyJ|token/i);
     expect(await context.cookies()).toEqual([]);
 
-    await page.reload(); // memory is gone: the price of keeping tokens out of reach of storage reads
-    await expect(page.getByRole('heading', { name: 'Sign in' })).toBeVisible();
+    await page.reload(); // sessionStorage survives a reload
+    await expect(page.getByRole('button', { name: 'Account menu' })).toBeVisible();
+
+    const otherTab = await context.newPage(); // a new tab has its own storage: signed out
+    await otherTab.goto('/');
+    await expect(otherTab.getByRole('heading', { name: 'Sign in' })).toBeVisible();
     await context.close();
   });
 
@@ -104,7 +108,7 @@ test.describe('security', () => {
     await asStolen.dispose();
     await anonymous.dispose();
 
-    // And through the UI: Sign out also removes the tokens from memory.
+    // And through the UI: Sign out also removes the tokens from storage.
     const { context, page } = await newSession(browser, 'dev1');
     await uiSignOut(page);
     await appGoto(page, '/timesheet');
@@ -159,7 +163,9 @@ test.describe('security', () => {
     }
   });
 
-  test('admins cannot approve while the owner has a manager; only that manager can', async ({ browser }) => {
+  test('admins cannot approve while the owner has a manager; only that manager can', async ({
+    browser,
+  }) => {
     const dev1 = await newSession(browser, 'dev1');
     await createEntry(dev1.api, {
       projectId: data.projectId,
