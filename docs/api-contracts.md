@@ -38,7 +38,7 @@ Swagger UI: `GET /api-docs`; OpenAPI 3.0 JSON: `GET /api-docs.json` (outside `/a
 Bearer tokens (ADR 0015; replaces the earlier cookie session). `POST /api/auth/login` returns a short-lived JWT `accessToken` and an opaque `refreshToken`; every other protected call sends `Authorization: Bearer <accessToken>`. When it expires (`expiresIn` seconds, default 900) call `POST /api/auth/refresh`. A missing, malformed, expired, forged or revoked token is `401 UNAUTHENTICATED` with `WWW-Authenticate: Bearer`. No cookies are set or read.
 
 ### POST /api/auth/change-password
-Auth: bearer. Body `{ currentPassword, newPassword (8–128) }`. 204; the user's **other** sessions are deleted; the session of the access token in use stays. 401 `UNAUTHENTICATED` (wrong current password — counts toward the failed-login rate limit), 422 (new equals current), 400 validation.
+Auth: bearer. Body `{ currentPassword, newPassword (8–128) }`. 204; the user's **other** sessions are deleted; the session of the access token in use stays. 401 `UNAUTHENTICATED` (wrong current password — counts toward the failed-login rate limit), 422 (new equals current), 400 validation. Clears `mustChangePassword`. This route and `GET /api/auth/me` are the only authenticated routes usable while `mustChangePassword` is true.
 
 ### POST /api/auth/login
 - Auth: none. Body: `{ "email": string, "password": string }` (email trimmed and lower-cased; password 1–128 chars).
@@ -85,7 +85,9 @@ Errors: 400 `VALIDATION_ERROR`; 409 `CONFLICT` (email already exists, case-insen
 Setting `isActive: false` deletes all of the user's sessions at once. Concurrent user-administration writes are serialized with one advisory lock, so a manager cannot be deactivated while a report is being assigned to them.
 
 ### POST /api/users/:id/password
-**ADMIN only.** Body `{ "password": 8–128 chars }`. 204. Replaces the user's password and deletes all their sessions. 404 unknown user; 422 for an ADMIN target (admins change their own password).
+**ADMIN only.** Body `{ "password": 8–128 chars }`. 204. Replaces the user's password and deletes all their sessions. Sets `mustChangePassword = true` (the user must choose their own password at next sign-in; until then every other authenticated route answers **403 `PASSWORD_CHANGE_REQUIRED`**) and writes an audit row `PASSWORD_RESET` (`entityType: user`, actor = the admin, never the password). 404 unknown user; 422 for an ADMIN target (admins change their own password).
+
+The `user` object returned by login, refresh and `/auth/me` includes `mustChangePassword: boolean`. Audit filters accept `action=PASSWORD_RESET` and `entityType=user`.
 
 ### GET /api/users/direct-reports
 MANAGER only (403 `FORBIDDEN` otherwise, including ADMIN). 200 `{ "users": […] }`.

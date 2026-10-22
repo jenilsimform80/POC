@@ -92,7 +92,7 @@ An independent read-only review produced 8 findings; each was reproduced by a fa
 
 ## Frontend notes (Phase 7)
 - The UI is never a security boundary; all permission and lock rules stay on the backend.
-- Tokens are in JavaScript **memory only** (ADR 0015; never web storage or cookies), so XSS could use them while the tab is open; the strict CSP is the main defence. A page reload signs the user out.
+- Tokens are in per-tab **sessionStorage** (ADR 0018; never localStorage or cookies), so XSS could read and carry them away; the strict CSP, short access tokens and rotating single-use refresh tokens limit that. A reload keeps the session; a new tab does not share it.
 - CORS lists `FRONTEND_URL` (without credentials). There is no Origin check: with no cookies there is no CSRF to block.
 - Users only see backend messages (`ApiError.message`) or a fixed generic text; raw exceptions and non-JSON error bodies are never rendered (tested).
 - Build output includes source maps (`build.sourcemap`) for timesheets-billing; disable for a public deployment.

@@ -7,7 +7,8 @@ Honest list as of the end of Phase 9. Nothing here is hidden behind a passing te
 - Assumptions adopted so work could proceed: quarter-hour entries, 24 h/day hard cap, warnings above 10 h/day and 48 h/week; ISO (Monday) weeks; submitted/approved weeks frozen, rejected weeks reopen, no "recall"; a week needs ≥ 1 entry and an *active manager with role MANAGER* to be submitted; only the owner's direct manager approves (admins cannot); global calendar-month locks, admin-only unlock with a reason, admins not exempt; reports count all logged hours (not only approved); budget report admin-only with WARNING ≥ 80 % / OVER > 100 %; allocated hours hidden from non-admins; calendar dates never converted between time zones, years 2000–2100.
 
 ## 2. Product scope not built
-- No user administration, password reset, registration or MFA (demo users come from `npm run db:seed`, dev only).
+- No self-service "forgot password" (email reset links, see ADR 0017 for why), no registration and no MFA. Admins reset other users' passwords; a forgotten admin password is recovered with `npm run admin:reset-password` on the server. (Users are created by admins, or by `npm run db:seed` in dev.)
+- Previously: no user administration, password reset, registration or MFA (demo users come from `npm run db:seed`, dev only).
 - No audit-trail screen (API exists, admin-only); admin changes to projects (budget/archive/dates) are **not audited**.
 - A top-level manager (no manager of their own) cannot submit a timesheet (nobody could approve it).
 - No notifications, report export, charts, saved filters, pagination (lists are capped: entries 1000, submissions 200, reports 5000 rows with a `truncated` flag).
@@ -15,7 +16,7 @@ Honest list as of the end of Phase 9. Nothing here is hidden behind a passing te
 
 ## 3. Delivery (Phase 10)
 - **The Docker artifacts (`docker-compose.yml`, both Dockerfiles, `frontend/nginx/`, `docker/postgres/init/01-roles.sh`) were never executed**: there is no container runtime on the development machine. `docker compose up` is therefore **unverified**. Verified instead: fresh-database migration, the production runtime install and production-mode backend, the full e2e suite and the scripted walkthrough behind a proxy emulator using the real header values, and a clean-copy local setup. The two-role database setup (which closes the trigger-bypass limitation below in the Docker deployment) is written but its SQL has not been run.
-- Bearer tokens are kept in browser memory only (ADR 0015): **reloading the page or opening a new tab signs the user out**. A real deployment needs HTTPS in front of the `web` container. Refresh-token reuse is rejected but does not revoke the whole session (no token families).
+- Bearer tokens are kept in per-tab `sessionStorage` (ADR 0018): a reload stays signed in, **each new tab or window starts signed out** (so different roles can use different tabs), and any script on the page (XSS) could read them. A real deployment needs HTTPS in front of the `web` container. Refresh-token reuse is rejected but does not revoke the whole session (no token families).
 - No TLS termination, backups schedule, monitoring or log shipping are provided.
 
 ## 4. Security posture and deployment responsibilities
