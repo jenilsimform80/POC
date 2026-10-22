@@ -228,7 +228,7 @@ export const dashboardApi = (): Record<string, Responder> => ({
       truncated: false,
     }),
   'GET /submissions': ok({ submissions: [] }),
-  'GET /users/direct-reports': ok({ users: [] }),
+  'GET /users': ok({ users: [] }),
   'GET /reports/project-budgets': ok({
     through: null,
     projects: [],

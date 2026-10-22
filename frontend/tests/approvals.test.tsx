@@ -40,7 +40,7 @@ describe('approvals queue', () => {
   const queue = (items: Submission[], extra = {}) =>
     mockApi({
       ...signedInAs(users.manager),
-      'GET /users/direct-reports': ok({ users: team }),
+      'GET /users': ok({ users: team }),
       'GET /submissions': (req: MockRequest) => {
         const status = req.query.get('status');
         return ok({ submissions: items.filter((s) => !status || s.status === status) });
@@ -93,7 +93,7 @@ describe('approvals queue', () => {
     let failing = true;
     mockApi({
       ...signedInAs(users.manager),
-      'GET /users/direct-reports': ok({ users: team }),
+      'GET /users': ok({ users: team }),
       'GET /submissions': () =>
         failing
           ? fail(500, 'INTERNAL_ERROR', 'An unexpected error occurred')

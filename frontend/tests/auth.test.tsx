@@ -210,7 +210,17 @@ describe('role-aware navigation (a convenience; the backend enforces access)', (
     [
       'admin',
       users.admin,
-      ['Home', 'Timesheet', 'Projects', 'Reports', 'Budgets', 'Users', 'Locked periods', 'Account'],
+      [
+        'Home',
+        'Timesheet',
+        'Approvals',
+        'Projects',
+        'Reports',
+        'Budgets',
+        'Users',
+        'Locked periods',
+        'Account',
+      ],
     ],
   ])('shows the right links for a %s', async (_label, user, expected) => {
     mockApi(signedInAs(user));

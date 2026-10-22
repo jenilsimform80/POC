@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
 import { Link } from 'react-router';
 import { listSubmissions } from '../../api/submissions';
-import { listDirectReports } from '../../api/users';
+import { listUsers } from '../../api/users';
 import type { SubmissionStatus } from '../../api/types';
 import { AsyncView } from '../../components/ui/AsyncView';
 import { EmptyState } from '../../components/ui/EmptyState';
@@ -23,7 +23,7 @@ export function ApprovalsPage() {
     (signal: AbortSignal) => listSubmissions({ forApproval: true, status }, signal),
     [status],
   );
-  const loadReports = useCallback((signal: AbortSignal) => listDirectReports(signal), []);
+  const loadReports = useCallback((signal: AbortSignal) => listUsers(signal), []);
   const submissions = useAsync(loadSubmissions);
   const reports = useAsync(loadReports);
   const state = combineAsync({ submissions: submissions.state, reports: reports.state });

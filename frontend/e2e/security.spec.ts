@@ -159,7 +159,7 @@ test.describe('security', () => {
     }
   });
 
-  test('admins cannot approve timesheets; only the owner’s manager can', async ({ browser }) => {
+  test('admins cannot approve while the owner has a manager; only that manager can', async ({ browser }) => {
     const dev1 = await newSession(browser, 'dev1');
     await createEntry(dev1.api, {
       projectId: data.projectId,
@@ -176,7 +176,7 @@ test.describe('security', () => {
 
     const admin = await newSession(browser, 'admin');
     expect((await admin.api.post(`/api/submissions/${id}/approve`, { data: {} })).status()).toBe(
-      403,
+      404,
     );
     await admin.context.close();
     const other = await newSession(browser, 'otherManager');

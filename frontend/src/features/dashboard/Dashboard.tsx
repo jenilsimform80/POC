@@ -4,7 +4,7 @@ import { useCurrentUser } from '../../auth/useAuth';
 import { getBudgetReport, getHoursReport } from '../../api/reports';
 import { listSubmissions } from '../../api/submissions';
 import { getWeek } from '../../api/timesheets';
-import { listDirectReports } from '../../api/users';
+import { listUsers } from '../../api/users';
 import type { Role } from '../../api/types';
 import { AsyncView } from '../../components/ui/AsyncView';
 import { EmptyState } from '../../components/ui/EmptyState';
@@ -98,7 +98,7 @@ export function Dashboard() {
         <MonthlyTrend today={today} />
         <ProjectBreakdown today={today} />
         {role !== 'CONTRIBUTOR' && <TeamBreakdown today={today} />}
-        {role === 'MANAGER' && <PendingApprovals />}
+        {role !== 'CONTRIBUTOR' && <PendingApprovals />}
         {role === 'ADMIN' && <BudgetHealth />}
       </div>
     </div>
@@ -121,7 +121,7 @@ function WeekAndKpis({ today, role }: { today: string; role: Role }) {
   const { state, reload } = useAsync(load);
   const loadPending = useCallback(
     (signal: AbortSignal) =>
-      role === 'MANAGER' ? listSubmissions({ forApproval: true }, signal) : Promise.resolve([]),
+      role !== 'CONTRIBUTOR' ? listSubmissions({ forApproval: true }, signal) : Promise.resolve([]),
     [role],
   );
   const pending = useAsync(loadPending);
@@ -170,7 +170,7 @@ function WeekAndKpis({ today, role }: { today: string; role: Role }) {
                   unit="%"
                   hint={`${round(monthBillable)} h billable this month`}
                 />
-                {role === 'MANAGER' && (
+                {role !== 'CONTRIBUTOR' && (
                   <Kpi
                     label="Waiting for your decision"
                     value={pending.state.status === 'success' ? pending.state.data.length : '–'}
@@ -334,7 +334,7 @@ function PendingApprovals() {
   const load = useCallback(async (signal: AbortSignal) => {
     const [submissions, team] = await Promise.all([
       listSubmissions({ forApproval: true }, signal),
-      listDirectReports(signal),
+      listUsers(signal),
     ]);
     return { submissions, team };
   }, []);

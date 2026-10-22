@@ -88,7 +88,7 @@ describe('home dashboard', () => {
           },
         ],
       }),
-      'GET /users/direct-reports': ok({ users: [users.contributor] }),
+      'GET /users': ok({ users: [users.contributor] }),
     });
 
     renderRoutes('/');
@@ -151,5 +151,32 @@ describe('home dashboard', () => {
 
     expect(await screen.findByText('Could not load project hours')).toBeInTheDocument();
     expect(await screen.findByRole('img', { name: /Hours per day this week/ })).toBeInTheDocument();
+  });
+
+  it('shows an admin the approvals waiting because someone has no manager', async () => {
+    mockApi({
+      ...signedInAs(users.admin),
+      ...dashboardApi(),
+      'GET /submissions': ok({
+        submissions: [
+          {
+            id: 's9',
+            userId: 'u-dev',
+            weekStart: '2026-03-02',
+            status: 'SUBMITTED',
+            submittedAt: '',
+            updatedAt: '',
+          },
+        ],
+      }),
+      'GET /users': ok({ users: [users.contributor] }),
+    });
+
+    renderRoutes('/');
+
+    expect(await screen.findByRole('link', { name: 'Review' })).toHaveAttribute(
+      'href',
+      '/approvals/s9',
+    );
   });
 });

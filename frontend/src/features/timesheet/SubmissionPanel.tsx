@@ -31,7 +31,8 @@ export function SubmissionPanel({ week, onSubmitted }: SubmissionPanelProps) {
       {week.status === 'SUBMITTED' && (
         <Alert variant="info" title="Submitted">
           {week.submission && <>Sent {formatTimestamp(week.submission.submittedAt)}. </>}
-          Waiting for your manager. Editing is locked until they decide.
+          Waiting for your manager (or an admin, if you have none). Editing is locked until they
+          decide.
         </Alert>
       )}
       {week.status === 'APPROVED' && (
@@ -55,7 +56,10 @@ export function SubmissionPanel({ week, onSubmitted }: SubmissionPanelProps) {
       )}
       {canSubmit && confirming && (
         <div role="group" aria-label="Confirm submit" className="row">
-          <span>Submit this week? You will not be able to edit it until your manager decides.</span>
+          <span>
+            Submit this week? You will not be able to edit it until your manager (or an admin, if
+            you have none) decides.
+          </span>
           <Button onClick={() => void submit.run()} disabled={submit.running}>
             {submit.running ? 'Submitting…' : 'Yes, submit'}
           </Button>

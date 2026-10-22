@@ -6,7 +6,7 @@ import type { Role } from '../api/types';
  */
 export const ACCESS = {
   timesheet: ['CONTRIBUTOR', 'MANAGER', 'ADMIN'],
-  approvals: ['MANAGER'],
+  approvals: ['MANAGER', 'ADMIN'],
   projects: ['CONTRIBUTOR', 'MANAGER', 'ADMIN'],
   reports: ['CONTRIBUTOR', 'MANAGER', 'ADMIN'],
   budgets: ['ADMIN'],
