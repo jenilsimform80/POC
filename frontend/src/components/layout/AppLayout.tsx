@@ -60,7 +60,11 @@ export function AppLayout() {
   const navigate = useNavigate();
   const user = state.status === 'authenticated' ? state.user : null;
   const items = user
-    ? NAV_ITEMS.filter((item) => !item.area || canAccess(user.role, item.area))
+    ? NAV_ITEMS.filter((item) =>
+        user.mustChangePassword
+          ? item.to === '/account'
+          : !item.area || canAccess(user.role, item.area),
+      )
     : [];
   const menuItems: ActionMenuItem[] = user
     ? [

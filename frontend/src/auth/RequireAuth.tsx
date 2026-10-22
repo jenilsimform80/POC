@@ -16,5 +16,10 @@ export function RequireAuth() {
     const from = state.signedOut ? undefined : `${location.pathname}${location.search}`;
     return <Navigate to="/login" replace state={from === undefined ? null : { from }} />;
   }
+  // An admin reset this password: the only usable page is Account until it is changed. (The
+  // backend refuses every other request too; this just keeps the user from seeing errors.)
+  if (state.user.mustChangePassword && location.pathname !== '/account') {
+    return <Navigate to="/account" replace />;
+  }
   return <Outlet />;
 }

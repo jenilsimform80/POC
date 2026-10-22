@@ -94,3 +94,39 @@ describe('account: change password', () => {
     expect(screen.getByRole('button', { name: 'Show confirm new password' })).toBeInTheDocument();
   });
 });
+
+describe('account: forced change after an admin reset', () => {
+  const flagged = { ...users.contributor, mustChangePassword: true };
+
+  it('sends the user to Account from any page and hides the rest of the navigation', async () => {
+    mockApi(signedInAs(flagged));
+    renderRoutes('/projects');
+
+    expect(await screen.findByRole('heading', { name: 'Account' })).toBeInTheDocument();
+    expect(screen.getByText('Choose a new password to continue')).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Projects' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Timesheet' })).not.toBeInTheDocument();
+  });
+
+  it('unlocks the app once the password is changed', async () => {
+    mockApi({
+      ...signedInAs(flagged),
+      'POST /auth/change-password': noContent(),
+    });
+    renderRoutes('/account');
+    await screen.findByText('Choose a new password to continue');
+
+    await fill('Temp-Password-123', 'My-Own-Password-9', 'My-Own-Password-9');
+
+    expect(await screen.findByText('Your password was changed.')).toBeInTheDocument();
+    expect(screen.queryByText('Choose a new password to continue')).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Timesheet' })).toBeInTheDocument();
+  });
+
+  it('does not restrict users nobody reset', async () => {
+    mockApi(signedInAs(users.contributor));
+    renderRoutes('/projects');
+
+    expect(await screen.findByRole('heading', { name: 'Projects' })).toBeInTheDocument();
+  });
+});

@@ -4,13 +4,14 @@ import { Alert } from '../../components/ui/Alert';
 import { Button } from '../../components/ui/Button';
 import { PasswordField } from '../../components/ui/FormControls';
 import { describeError } from '../../components/ui/describeError';
-import { useCurrentUser } from '../../auth/useAuth';
+import { useAuth, useCurrentUser } from '../../auth/useAuth';
 import { useMutation } from '../../hooks/useMutation';
 import { fieldErrorsFrom, MIN_PASSWORD_LENGTH } from '../../lib/forms';
 import styles from '../projects/Projects.module.css';
 
 export function AccountPage() {
   const user = useCurrentUser();
+  const { markPasswordChanged } = useAuth();
   const [current, setCurrent] = useState('');
   const [next, setNext] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -36,12 +37,19 @@ export function AccountPage() {
       setNext('');
       setConfirm('');
       setDone(true);
+      markPasswordChanged();
     }
   };
 
   return (
     <>
       <h1>Account</h1>
+      {user.mustChangePassword && (
+        <Alert variant="warning" title="Choose a new password to continue">
+          An admin reset your password, so they know the temporary one. Set your own below; the rest
+          of the app unlocks as soon as you do.
+        </Alert>
+      )}
       <dl className={styles.facts}>
         <dt>Name</dt>
         <dd>{user.name}</dd>

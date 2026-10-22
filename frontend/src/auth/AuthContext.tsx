@@ -16,6 +16,8 @@ export interface AuthContextValue {
   login: (email: string, password: string) => Promise<void>;
   /** Rejects (user stays signed in) if the server could not end the session. */
   logout: () => Promise<void>;
+  /** Call after the forced password change succeeded so the app unlocks. */
+  markPasswordChanged: () => void;
 }
 
 // eslint-disable-next-line react-refresh/only-export-components
@@ -70,6 +72,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setState({ status: 'anonymous', signedOut: true });
   }, []);
 
-  const value = useMemo(() => ({ state, login, logout }), [state, login, logout]);
+  const markPasswordChanged = useCallback(() => {
+    setState((current) =>
+      current.status === 'authenticated'
+        ? { status: 'authenticated', user: { ...current.user, mustChangePassword: false } }
+        : current,
+    );
+  }, []);
+
+  const value = useMemo(
+    () => ({ state, login, logout, markPasswordChanged }),
+    [state, login, logout, markPasswordChanged],
+  );
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

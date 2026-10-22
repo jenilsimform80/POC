@@ -10,6 +10,8 @@ export interface User {
   role: Role;
   managerId: string | null;
   isActive?: boolean;
+  /** Set after an admin reset: only changing the password is allowed until it is done. */
+  mustChangePassword?: boolean;
 }
 
 export interface Task {

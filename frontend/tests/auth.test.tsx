@@ -68,6 +68,13 @@ describe('session bootstrap and route guards', () => {
 });
 
 describe('login', () => {
+  it('tells users who forgot their password to ask an admin', async () => {
+    mockApi();
+    renderRoutes('/login');
+
+    expect(await screen.findByText(/Forgot your password\? Ask an admin/)).toBeInTheDocument();
+  });
+
   it('lets the user reveal and re-hide the password, and signs in with what was typed', async () => {
     const api = mockApi({ 'POST /auth/login': tokenResponse(users.contributor) });
     renderRoutes('/login');

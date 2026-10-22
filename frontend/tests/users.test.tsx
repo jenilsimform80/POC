@@ -308,6 +308,26 @@ describe('user management (admin)', () => {
     expect(reset.getByLabelText('New password')).toHaveAttribute('type', 'text');
   });
 
+  it('generates a temporary password and shows it once after saving', async () => {
+    const api = await open();
+    const user = userEvent.setup();
+
+    await choose(user, 'dev@example.com', 'Reset password');
+    const form = within(screen.getByRole('form', { name: 'Reset password for dev@example.com' }));
+    await user.click(form.getByRole('button', { name: 'Generate' }));
+    await user.click(form.getByRole('button', { name: 'Set password' }));
+
+    const shown = await screen.findByRole('group', {
+      name: 'Temporary password for dev@example.com',
+    });
+    const sent = (api.calls('POST /users/:id/password')[0]!.body as { password: string }).password;
+    expect(sent).toHaveLength(16);
+    expect(shown).toHaveTextContent(sent);
+
+    await user.click(within(shown).getByRole('button', { name: 'Done' }));
+    expect(screen.queryByText(sent)).not.toBeInTheDocument();
+  });
+
   it('resets a password, validating the length first', async () => {
     const api = await open();
     const user = userEvent.setup();

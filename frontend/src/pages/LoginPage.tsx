@@ -80,6 +80,10 @@ export function LoginPage() {
               {signIn.running ? 'Signing in…' : 'Sign in'}
             </Button>
           </form>
+          <p className={styles.lead}>
+            Forgot your password? Ask an admin to reset it; you will choose a new one when you sign
+            in.
+          </p>
         </section>
       </div>
     </div>
