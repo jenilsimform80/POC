@@ -10,6 +10,7 @@ import {
   LockIcon,
   WalletIcon,
 } from '../components/layout/icons';
+import { formatDay, todayIso } from '../lib/dates';
 import { Dashboard } from '../features/dashboard/Dashboard';
 import styles from './HomePage.module.css';
 
@@ -69,10 +70,23 @@ export function HomePage() {
   return (
     <>
       <div className={styles.hero}>
-        <h1>Welcome, {user.name}</h1>
-        <p className="muted">
-          Log hours against projects, submit your weekly timesheet, and see where the hours go.
-        </p>
+        <div>
+          <p className={styles.date}>{formatDay(todayIso())}</p>
+          <h1>Welcome, {user.name}</h1>
+          <p className="muted">
+            Log hours against projects, submit your weekly timesheet, and see where the hours go.
+          </p>
+        </div>
+        <div className={styles.heroActions}>
+          <Link to="/timesheet" className={styles.primaryLink}>
+            Log hours
+          </Link>
+          {canAccess(user.role, 'approvals') && (
+            <Link to="/approvals" className={styles.secondaryLink}>
+              Review approvals
+            </Link>
+          )}
+        </div>
       </div>
       <Dashboard />
       <h2 className={styles.quickLinks}>Quick links</h2>
@@ -84,6 +98,9 @@ export function HomePage() {
               <span>
                 <span className={styles.title}>{s.title}</span>
                 <span className={styles.desc}>{s.description}</span>
+              </span>
+              <span className={styles.arrow} aria-hidden="true">
+                →
               </span>
             </Link>
           </li>

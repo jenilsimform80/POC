@@ -12,6 +12,7 @@
 }
 .kpi {
   padding: 1rem 1.1rem;
+  border-top: 3px solid var(--color-accent);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   background: var(--color-surface);
@@ -25,7 +26,9 @@
 .kpiValue {
   display: block;
   margin-top: 0.2rem;
-  font-size: 1.75rem;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  font-size: 1.9rem;
   font-weight: 700;
   line-height: 1.2;
 }
@@ -60,6 +63,8 @@
 }
 .panelSub {
   margin: 0 0 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--color-border);
   color: var(--color-text-muted);
   font-size: 0.85rem;
 }
@@ -122,6 +127,9 @@
   min-height: 1rem;
   font-size: 0.75rem;
   font-variant-numeric: tabular-nums;
+}
+.column:hover .columnLabel {
+  color: var(--color-text);
 }
 .columnTrack {
   display: flex;
@@ -212,7 +220,14 @@
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
   font-size: 0.9rem;
+  transition: background 0.15s;
+}
+.listItem:hover {
+  background: var(--color-surface-alt);
 }
 .sectionTitle {
   margin: 0.5rem 0 0;
