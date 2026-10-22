@@ -6,8 +6,18 @@ import type { PrismaClient } from '../generated/prisma/client.js';
 
 const BEARER = /^Bearer ([A-Za-z0-9._~+/-]+=*)$/i;
 
-/** Requires `Authorization: Bearer <access token>`; attaches the user to `req.auth`. */
-export function createAuthenticate(prisma: PrismaClient): RequestHandler {
+/**
+ * Requires `Authorization: Bearer <access token>`; attaches the user to `req.auth`.
+ *
+ * A user whose password an admin reset (`mustChangePassword`) is refused with 403
+ * PASSWORD_CHANGE_REQUIRED on every route unless it opts in with `allowPasswordChangeRequired`
+ * (only /auth/me and /auth/change-password do). Deny-by-default: a new route is protected
+ * without anyone remembering to add a check.
+ */
+export function createAuthenticate(
+  prisma: PrismaClient,
+  options: { allowPasswordChangeRequired?: boolean } = {},
+): RequestHandler {
   return async (req, res, next) => {
     const unauthenticated = () => {
       // RFC 6750: tell the client which scheme is expected.
@@ -21,6 +31,10 @@ export function createAuthenticate(prisma: PrismaClient): RequestHandler {
     const user = claims ? await resolveSession(prisma, claims.sessionId, claims.userId) : null;
     if (!claims || !user) {
       unauthenticated();
+      return;
+    }
+    if (user.mustChangePassword && !options.allowPasswordChangeRequired) {
+      next(new AppError('PASSWORD_CHANGE_REQUIRED', 403, 'You must change your password first'));
       return;
     }
     req.auth = user;

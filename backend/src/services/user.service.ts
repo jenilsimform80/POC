@@ -2,6 +2,7 @@ import { hashPassword, verifyPassword } from '../auth/password.js';
 import { AppError } from '../errors/app-error.js';
 import { isUniqueViolation } from '../errors/prisma-errors.js';
 import type { PrismaClient, Role } from '../generated/prisma/client.js';
+import { recordAudit } from './audit.service.js';
 import type { Db } from './db-types.js';
 
 type EditableRole = Extract<Role, 'CONTRIBUTOR' | 'MANAGER'>;
@@ -150,8 +151,17 @@ export async function updateUser(prisma: PrismaClient, userId: string, input: Up
   });
 }
 
-/** Admin sets a new password for another user; all of that user's sessions end. */
-export async function resetPassword(prisma: PrismaClient, userId: string, password: string) {
+/**
+ * Admin sets a new password for another user; all of that user's sessions end and the user must
+ * choose their own password at next sign-in (the admin knows this one). The reset is audited
+ * (who reset whose password, never the password itself) in the same transaction.
+ */
+export async function resetPassword(
+  prisma: PrismaClient,
+  actorId: string,
+  userId: string,
+  password: string,
+) {
   const passwordHash = await hashPassword(password);
   await prisma.$transaction(async (tx) => {
     const target = await tx.user.findUnique({ where: { id: userId }, select: { role: true } });
@@ -159,8 +169,17 @@ export async function resetPassword(prisma: PrismaClient, userId: string, passwo
     if (target.role === 'ADMIN') {
       throw rule('Admin passwords cannot be reset here; admins change their own password');
     }
-    await tx.user.update({ where: { id: userId }, data: { passwordHash } });
+    await tx.user.update({
+      where: { id: userId },
+      data: { passwordHash, mustChangePassword: true },
+    });
     await tx.session.deleteMany({ where: { userId } });
+    await recordAudit(tx, {
+      actorId,
+      action: 'PASSWORD_RESET',
+      entityType: 'user',
+      entityId: userId,
+    });
   });
 }
 
@@ -186,7 +205,10 @@ export async function changeOwnPassword(
   }
   const passwordHash = await hashPassword(input.newPassword);
   await prisma.$transaction(async (tx) => {
-    await tx.user.update({ where: { id: userId }, data: { passwordHash } });
+    await tx.user.update({
+      where: { id: userId },
+      data: { passwordHash, mustChangePassword: false },
+    });
     await tx.session.deleteMany({
       where: {
         userId,

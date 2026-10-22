@@ -27,6 +27,7 @@ const asAuthUser = (u: {
   name: u.name,
   role: u.role,
   managerId: u.managerId,
+  mustChangePassword: false,
 });
 
 async function failureOf(actor: AuthUser, id = submissionId): Promise<AppError> {

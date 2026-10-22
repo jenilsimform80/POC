@@ -40,20 +40,23 @@ enum AuditAction {
   SUBMISSION_REJECTED
   PERIOD_LOCKED
   PERIOD_UNLOCKED
+  PASSWORD_RESET
 
   @@map("audit_action")
 }
 
 model User {
-  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  email        String   @unique // stored lower-cased by the application
-  name         String
-  passwordHash String   @map("password_hash")
-  role         Role     @default(CONTRIBUTOR)
-  managerId    String?  @map("manager_id") @db.Uuid
-  isActive     Boolean  @default(true) @map("is_active")
-  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  id                 String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email              String   @unique // stored lower-cased by the application
+  name               String
+  passwordHash       String   @map("password_hash")
+  role               Role     @default(CONTRIBUTOR)
+  managerId          String?  @map("manager_id") @db.Uuid
+  isActive           Boolean  @default(true) @map("is_active")
+  // Set when an admin resets the password: the user may only change it until they do.
+  mustChangePassword Boolean  @default(false) @map("must_change_password")
+  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt          DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   manager            User?              @relation("ManagerReports", fields: [managerId], references: [id], onDelete: Restrict)
   directReports      User[]             @relation("ManagerReports")

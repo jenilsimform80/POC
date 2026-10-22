@@ -275,6 +275,66 @@ describe('POST /api/users/:id/password (admin reset)', () => {
   });
 });
 
+describe('forced password change after an admin reset', () => {
+  const loginAfterReset = async () => {
+    const m = await manager();
+    const c = await contributor(m.id);
+    await asAdmin.password(c.id, { password: NEW_PASSWORD });
+    const res = await request(app)
+      .post('/api/auth/login')
+      .send({ email: c.email, password: NEW_PASSWORD });
+    return { c, cookie: `Bearer ${(res.body as { accessToken: string }).accessToken}`, res };
+  };
+
+  it('flags the user at login and refuses every route except /me and change-password', async () => {
+    const { cookie, res } = await loginAfterReset();
+    expect((res.body as { user: { mustChangePassword: boolean } }).user.mustChangePassword).toBe(
+      true,
+    );
+    expect((await request(app).get('/api/auth/me').set('Authorization', cookie)).status).toBe(200);
+    for (const path of ['/api/projects', '/api/timesheets/2026-03-02', '/api/submissions']) {
+      const blocked = await request(app).get(path).set('Authorization', cookie);
+      expect(blocked.status, path).toBe(403);
+      expect((blocked.body as ApiErrorBody).error.code).toBe('PASSWORD_CHANGE_REQUIRED');
+    }
+  });
+
+  it('lifts the restriction once the user chooses their own password', async () => {
+    const { c, cookie } = await loginAfterReset();
+    const changed = await request(app)
+      .post('/api/auth/change-password')
+      .set('Authorization', cookie)
+      .send({ currentPassword: NEW_PASSWORD, newPassword: 'My-Own-Password-9' });
+    expect(changed.status).toBe(204);
+    expect((await request(app).get('/api/projects').set('Authorization', cookie)).status).toBe(200);
+    expect((await prisma.user.findUniqueOrThrow({ where: { id: c.id } })).mustChangePassword).toBe(
+      false,
+    );
+  });
+
+  it('does not flag users nobody reset', async () => {
+    const m = await manager();
+    const res = await request(app)
+      .post('/api/auth/login')
+      .send({ email: m.email, password: TEST_PASSWORD });
+    expect((res.body as { user: { mustChangePassword: boolean } }).user.mustChangePassword).toBe(
+      false,
+    );
+  });
+
+  it('audits who reset whose password, without storing the password', async () => {
+    const m = await manager();
+    const c = await contributor(m.id);
+    await asAdmin.password(c.id, { password: NEW_PASSWORD });
+    const rows = await prisma.auditLog.findMany({
+      where: { action: 'PASSWORD_RESET', entityId: c.id },
+    });
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ actorId: adminId, entityType: 'user' });
+    expect(JSON.stringify(rows[0])).not.toContain(NEW_PASSWORD);
+  });
+});
+
 describe('POST /api/auth/change-password (self)', () => {
   const change = (cookie: string | undefined, body: object) => {
     const req = request(app).post('/api/auth/change-password');

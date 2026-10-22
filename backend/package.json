@@ -23,6 +23,7 @@
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
     "check": "npm run typecheck && npm run lint && npm run format:check && npm test",
+    "admin:reset-password": "tsx --env-file=.env scripts/reset-admin-password.ts",
     "db:seed": "tsx --env-file=.env scripts/seed.ts",
     "db:setup:test": "tsx --env-file=.env scripts/setup-test-db.ts",
     "db:reset:test": "tsx --env-file=.env scripts/reset-test-db.ts",

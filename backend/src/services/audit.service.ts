@@ -5,7 +5,7 @@ import type { Db } from './db-types.js';
 export interface AuditEvent {
   actorId: string;
   action: AuditAction;
-  entityType: 'weekly_submission' | 'locked_period';
+  entityType: 'weekly_submission' | 'locked_period' | 'user';
   entityId: string;
   metadata?: Prisma.InputJsonValue;
 }

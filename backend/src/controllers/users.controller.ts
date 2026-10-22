@@ -39,9 +39,9 @@ export function createUsersController(prisma: PrismaClient) {
     res.status(200).json({ user: await updateUser(prisma, params.id, body) });
   };
 
-  const setPassword: RequestHandler = async (_req, res) => {
+  const setPassword: RequestHandler = async (req, res) => {
     const { params, body } = getValidated<typeof resetPasswordSchemas>(res);
-    await resetPassword(prisma, params.id, body.password);
+    await resetPassword(prisma, requireAuth(req).id, params.id, body.password);
     res.status(204).end();
   };
 

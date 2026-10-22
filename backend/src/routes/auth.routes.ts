@@ -46,11 +46,14 @@ export function createAuthRouter(prisma: PrismaClient, env: Env): Router {
   // Refresh is throttled by the coarse limiter too: it is a credential exchange.
   router.post('/refresh', attemptLimiter, validate(refreshSchemas), controller.postRefresh);
   router.post('/logout', validate(logoutSchemas), controller.postLogout);
-  router.get('/me', createAuthenticate(prisma), controller.getMe);
+  const authenticateAllowingReset = createAuthenticate(prisma, {
+    allowPasswordChangeRequired: true,
+  });
+  router.get('/me', authenticateAllowingReset, controller.getMe);
   // Wrong current passwords count toward the same failed-attempt limit as logins.
   router.post(
     '/change-password',
-    createAuthenticate(prisma),
+    authenticateAllowingReset,
     loginLimiter,
     validate(changePasswordSchemas),
     controller.postChangePassword,

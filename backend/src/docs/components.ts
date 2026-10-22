@@ -32,6 +32,7 @@ export const componentSchemas: Record<string, Json> = {
             'VALIDATION_ERROR',
             'UNAUTHENTICATED',
             'FORBIDDEN',
+            'PASSWORD_CHANGE_REQUIRED',
             'NOT_FOUND',
             'CONFLICT',
             'PERIOD_LOCKED',
@@ -85,6 +86,11 @@ export const componentSchemas: Record<string, Json> = {
     name: { type: 'string' },
     role: ROLE,
     managerId: nullable(uuid),
+    mustChangePassword: {
+      type: 'boolean',
+      description:
+        'True after an admin reset: every route except /auth/me and /auth/change-password answers 403 PASSWORD_CHANGE_REQUIRED until the user changes it.',
+    },
   }),
   User: obj({
     id: uuid,
@@ -223,10 +229,11 @@ export const componentSchemas: Record<string, Json> = {
         'SUBMISSION_REJECTED',
         'PERIOD_LOCKED',
         'PERIOD_UNLOCKED',
+        'PASSWORD_RESET',
       ],
     },
-    entityType: { type: 'string', enum: ['weekly_submission', 'locked_period'] },
-    entityId: { type: 'string', description: 'A submission id or a YYYY-MM period.' },
+    entityType: { type: 'string', enum: ['weekly_submission', 'locked_period', 'user'] },
+    entityId: { type: 'string', description: 'A submission id, a user id or a YYYY-MM period.' },
     metadata: {
       type: 'object',
       additionalProperties: true,

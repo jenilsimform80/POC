@@ -369,6 +369,7 @@ describe('time zone independence (calendar dates are never shifted)', () => {
     name: 'Alex Admin',
     role: 'ADMIN',
     managerId: null,
+    mustChangePassword: false,
   });
   const filter = { from: date('2026-02-01'), to: date('2026-04-30'), groupBy: dims };
 

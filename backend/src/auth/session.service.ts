@@ -51,8 +51,8 @@ export async function resolveSession(
   }
   if (!session.user.isActive) return null;
 
-  const { id, email, name, role, managerId } = session.user;
-  return { id, email, name, role, managerId };
+  const { id, email, name, role, managerId, mustChangePassword } = session.user;
+  return { id, email, name, role, managerId, mustChangePassword };
 }
 
 /**

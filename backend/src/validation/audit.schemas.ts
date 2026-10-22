@@ -10,9 +10,10 @@ export const listAuditSchemas = {
         'SUBMISSION_REJECTED',
         'PERIOD_LOCKED',
         'PERIOD_UNLOCKED',
+        'PASSWORD_RESET',
       ])
       .optional(),
-    entityType: z.enum(['weekly_submission', 'locked_period']).optional(),
+    entityType: z.enum(['weekly_submission', 'locked_period', 'user']).optional(),
     entityId: uuid.optional(),
     actorId: uuid.optional(),
     limit: z.coerce.number().int().min(1).max(200).default(50),

@@ -7,6 +7,8 @@ export interface AuthUser {
   name: string;
   role: Role;
   managerId: string | null;
+  /** An admin reset this password: only changing it is allowed until the user does. */
+  mustChangePassword: boolean;
 }
 
 export const authUserSelect = {
@@ -15,4 +17,5 @@ export const authUserSelect = {
   name: true,
   role: true,
   managerId: true,
+  mustChangePassword: true,
 } as const;

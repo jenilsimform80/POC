@@ -61,9 +61,9 @@ export async function login(
   const session = await createSession(prisma, record.id, options.sessionTtlHours);
   const access = await issueAccessToken(options, record.id, session.sessionId);
 
-  const { id, email, name, role, managerId } = record;
+  const { id, email, name, role, managerId, mustChangePassword } = record;
   return {
-    user: { id, email, name, role, managerId },
+    user: { id, email, name, role, managerId, mustChangePassword },
     ...access,
     refreshToken: session.refreshToken,
     refreshTokenExpiresAt: session.expiresAt,
@@ -89,9 +89,9 @@ export async function refresh(
   }
 
   const access = await issueAccessToken(options, user.id, rotated.sessionId);
-  const { id, email, name, role, managerId } = user;
+  const { id, email, name, role, managerId, mustChangePassword } = user;
   return {
-    user: { id, email, name, role, managerId },
+    user: { id, email, name, role, managerId, mustChangePassword },
     ...access,
     refreshToken: rotated.refreshToken,
     refreshTokenExpiresAt: rotated.expiresAt,
